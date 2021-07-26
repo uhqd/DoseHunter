@@ -60,7 +60,7 @@ namespace VMS.TPS
             int numberOfAcceptedPlansForThisPatient = 0;
             string idfilename = "id.txt";
             string structsfilename = "indics.txt";
-
+            Structure struct1;
             #region READ THE ID FILE
             if (verbose > 5)
             {
@@ -189,15 +189,11 @@ namespace VMS.TPS
             }
             #endregion
 
-            #region CREATE THE OUTPUT FILES
-            // Open text files to write output
+            #region CREATE THE OUTPUT FILES         
             StreamWriter swLogFile = new StreamWriter("out/log.txt");
             swLogFile.WriteLine("Output log\n\n\n");
-
-            StreamWriter swData = new StreamWriter("out/data.csv");
-            //swHeart.WriteLine("ID,volume(cc),meanDose(Gy),medianDose(Gy),V40Gy(cc),date,user");
-
-
+            StreamWriter swData = new StreamWriter("out/data.csv");    
+            
             #region WRITE CSV HEAD
             swData.Write("ID,date,user");  // first 3 fields separated by a coma
             foreach (string myString in list_struct)
@@ -209,8 +205,6 @@ namespace VMS.TPS
             }
             swData.Write("\r\n"); // add a final line break
             #endregion
-
-
             #endregion
 
             #region LOOP EVERY PATIENT
@@ -305,22 +299,74 @@ namespace VMS.TPS
                                 swLogFile.WriteLine("   Total dose =  {0}  ", plan.TotalDose); // verbose
 
                             }
+
+
+                            // write first 3 columns
+                            swData.Write("{0},{1},{2}", p.Id, plan.CreationDateTime, plan.CreationUserName);
+
                             StructureSet ss = plan.StructureSet;
+                            bool foundOneStruct = false;
+                            foreach (string myString in list_struct) // loop on lines of user dose index (1 by struct)
+                            {
+                                lineElements = myString.Split(',');  // separate elements in a line by a ,
+                                string[] myFirstName = lineElements[0].Split(';'); // separate the element (different struc names separate by a ;) 
+                                foundOneStruct = false;
+                                foreach (string myDiffStrucNames in myFirstName) // loop on the different names of a same struct
+                                {
+                                    if (foundOneStruct == false)
+                                    {
+                                        //Structure struct1 = ss.Structures.FirstOrDefault(x => x.Id == myDiffStrucNames);
+                                        struct1 = ss.Structures.FirstOrDefault(x => x.Id == myDiffStrucNames);
+                                        if (struct1 != null)
+                                        {
+                                            if (!struct1.IsEmpty)
+                                            {
+                                                foundOneStruct = true;
+                                                swLogFile.WriteLine("{0} found", myDiffStrucNames); // verbose
+                                                //if (verbose > 5)
+                                                    Console.WriteLine(" {0} found", myDiffStrucNames);
+                                                foreach (string dataToGet in lineElements.Skip(1)) // loop on index
+                                                {
+                                                    if (verbose > 5) 
+                                                        Console.WriteLine(" Gimme the {0} for {1}\r\n", dataToGet, struct1.Id);
+
+                                                    double thisValueImLookingFor = -99.999;
 
 
 
 
 
+                                                    swData.Write(",{0:0.000}", thisValueImLookingFor);
 
 
+                                                    //float thisValueImLookingFor = gimmeThisValue(dataToGet, struct1.Id)
 
+                                                }  
+                                            }
+                                        }
+                                    }                                                                      
+                                }
+                                
+                                if (foundOneStruct == false)
+                                {
+                                    Console.WriteLine(" Cannot find the structure {0} with this name or other names", myFirstName[0]);
+                                    swLogFile.WriteLine(" Cannot find the structure {0} with this name or other names", myFirstName[0]);
+                                    foreach (string skippedData in lineElements.Skip(1))
+                                        swData.Write(",");
+                                }
+                                /*else
+                                {
+                                    foreach (string dataToGet in lineElements.Skip(1))
+                                    {
+                                        swData.Write(",yes");
+                                       
+                                    }
+                                }*/
+                                // foreach (string myOthereMetrics in lineElements.Skip(1)) // Create a cell name: <struct name> (<dose index>)
+                                // swData.Write(",{0} ({1})", myFirstName[0], myOthereMetrics);
+                            }
 
-
-
-
-
-
-
+                            /*
                             #region COEUR
                             string myStructName = "Coeur";
                             Structure s = ss.Structures.FirstOrDefault(x => x.Id == myStructName);
@@ -357,11 +403,11 @@ namespace VMS.TPS
                                 return;
                             }
                             #endregion
-
+*/
                         }
 
                         #endregion
-
+                        swData.Write("\r\n");
                     } //end of plan loop
                     #endregion
                 } // end of course loop
