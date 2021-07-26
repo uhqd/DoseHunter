@@ -52,6 +52,7 @@ namespace VMS.TPS
     class Program
     {
         [STAThread]
+        #region EMPTY MAIN PROGRAM
         static void Main(string[] args)
         {
             try
@@ -66,8 +67,12 @@ namespace VMS.TPS
                 Console.Error.WriteLine(e.ToString());
             }
         }
+        #endregion
+
+        #region EXECUTE PROGRAM, THE REAL MAIN
         static void Execute(Application app)
         {
+            #region DECLARATION OF VARIABLES
             List<string> list_patient = new List<string>();
             List<string> list_struct = new List<string>();
             List<string> list_struct_name = new List<string>();
@@ -86,6 +91,7 @@ namespace VMS.TPS
             string idfilename = "id.txt"; // Input file names can not be chosen
             string structsfilename = "indics.txt"; // Input file names can not be chosen
             Structure struct1;
+            #endregion
 
             #region READ THE ID FILE
             if (verbose > 5)
@@ -378,7 +384,6 @@ namespace VMS.TPS
                 } // end of course loop
                 #endregion
 
-
                 app.ClosePatient();
                 Console.WriteLine("For this patient {0}/{1} accepted plans\n", numberOfAcceptedPlansForThisPatient, numberOfPlansForThisPatient);
                 swLogFile.WriteLine("For this patient {0}/{1} accepted plans\n", numberOfAcceptedPlansForThisPatient, numberOfPlansForThisPatient);
@@ -405,6 +410,9 @@ namespace VMS.TPS
 
             #endregion
         }
+        #endregion
+
+        #region AN EXTERNAL FUCTION USING REGEX TO GET THE DATA
         public static double gimmeThatBro(string myDataToGet, Structure myStruct, PlanSetup myPlan, DVHData dvh)
         {
             int verbose = 0;
@@ -497,5 +505,6 @@ namespace VMS.TPS
                 Console.WriteLine("Impossible to obtain {0} for {1} in {2} ", myDataToGet, myStruct.Id, myPlan.Id);
             return (checkThat);
         }
+        #endregion
     }
 }
