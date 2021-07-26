@@ -322,6 +322,8 @@ namespace VMS.TPS
                                             if (!struct1.IsEmpty)
                                             {
                                                 foundOneStruct = true;
+                                                DVHData dvh = plan.GetDVHCumulativeData(struct1, DoseValuePresentation.Absolute, VolumePresentation.Relative, 0.1);
+
                                                 swLogFile.WriteLine("{0} found", myDiffStrucNames); // verbose
                                                 //if (verbose > 5)
                                                     Console.WriteLine(" {0} found", myDiffStrucNames);
@@ -331,12 +333,32 @@ namespace VMS.TPS
                                                         Console.WriteLine(" Gimme the {0} for {1}\r\n", dataToGet, struct1.Id);
 
                                                     double thisValueImLookingFor = -99.999;
+                     
+                                                    thisValueImLookingFor = gimmeThatBro(dataToGet, struct1, plan,dvh);
+
+                                                   
+                                                    /*if (string.IsNullOrWhiteSpace(email))
+                                                        return false;
+                                                    Console.WriteLine(" -----------------  ");
+
+                                                    try
+                                                    {
+
+                                                        string d_at_v_pattern = @"^D(?<evalpt>\d+\p{P}\d+|\d+)(?<unit>(%|cc))$"; // matches D95%, D2cc
+                                                        var testMatch = Regex.Matches(email, d_at_v_pattern);
+                                                        if (testMatch.Count != 0) //Ca matche
+                                                        {
+                                                            Group eval = testMatch[0].Groups["evalpt"];
+                                                            Group unit = testMatch[0].Groups["unit"];
+                                                            Console.WriteLine("eval is {0}", eval.Value);
+                                                            Console.WriteLine("unit is {0}", testMatch.Count);
+
+                                                            //   eval.Value ou unit.Value
+                                                        } */
 
 
 
-
-
-                                                    swData.Write(",{0:0.000}", thisValueImLookingFor);
+                                                    swData.Write(",{0:0.00}", thisValueImLookingFor);
 
 
                                                     //float thisValueImLookingFor = gimmeThisValue(dataToGet, struct1.Id)
@@ -353,57 +375,8 @@ namespace VMS.TPS
                                     swLogFile.WriteLine(" Cannot find the structure {0} with this name or other names", myFirstName[0]);
                                     foreach (string skippedData in lineElements.Skip(1))
                                         swData.Write(",");
-                                }
-                                /*else
-                                {
-                                    foreach (string dataToGet in lineElements.Skip(1))
-                                    {
-                                        swData.Write(",yes");
-                                       
-                                    }
-                                }*/
-                                // foreach (string myOthereMetrics in lineElements.Skip(1)) // Create a cell name: <struct name> (<dose index>)
-                                // swData.Write(",{0} ({1})", myFirstName[0], myOthereMetrics);
-                            }
-
-                            /*
-                            #region COEUR
-                            string myStructName = "Coeur";
-                            Structure s = ss.Structures.FirstOrDefault(x => x.Id == myStructName);
-                            if (s != null)
-                            {
-                                if (!s.IsEmpty)
-                                {
-                                    DVHData dvh = plan.GetDVHCumulativeData(s, DoseValuePresentation.Absolute, VolumePresentation.Relative, 0.1);
-                                    // get the volume
-                                    double myVol = s.Volume;
-                                    // get median dose to Coeur
-                                    DoseValue myMedianDose = plan.GetDoseAtVolume(s, 50, VolumePresentation.Relative, DoseValuePresentation.Absolute);
-                                    // get mean dose
-                                    var myMeanDose = dvh.MeanDose;
-
-                                    // get V40Gy (cc)
-                                    DoseValue.DoseUnit du = DoseValue.DoseUnit.Gy;
-                                    DoseValue my40Gy = new DoseValue(40.0, du);
-                                    double V40GyCoeurcc = plan.GetVolumeAtDose(s, my40Gy, VolumePresentation.AbsoluteCm3);
-
-                                    //                                    swHeart.WriteLine("{0},{1:0.000},{2:0.000},{3:0.000},{4:0.000}", p.Id, plan.CreationDateTime, plan.CreationUserName, myVol, myMeanDose.Dose, myMedianDose.Dose, V40GyCoeurcc);
-                                    swData.WriteLine("{0},{1:0.000},{2:0.000},{3:0.000},{4:0.000},{5},{6}", p.Id, myVol, myMeanDose.Dose, myMedianDose.Dose, V40GyCoeurcc, plan.CreationDateTime, plan.CreationUserName);
-
-                                    if (verbose > 3)
-                                        Console.WriteLine("heart ok");
-                                }
-                            }
-                            else if (s == null || s.IsEmpty)
-                            {
-                                Console.WriteLine("*** Can not find {0} for patient {1}", myStructName, ipp);
-                                Console.WriteLine("*** Please check...");
-                                Console.WriteLine("*** Program is ending, type ENTER");
-                                Console.ReadLine();
-                                return;
-                            }
-                            #endregion
-*/
+                                }                              
+                            }                            
                         }
 
                         #endregion
@@ -441,6 +414,98 @@ namespace VMS.TPS
             #endregion
 
 
+        }
+        public static double gimmeThatBro(string myDataToGet, Structure myStruct, PlanSetup myPlan, DVHData dvh)
+        {
+            int verbose = 0;
+            double checkThat = -1.0;
+            if (verbose > 5) 
+                Console.WriteLine("--> looking for {0} for {1} in {2}", myDataToGet, myStruct.Id,myPlan.Id);
+            #region MAX DOSE       
+            if (myDataToGet == "max" || myDataToGet == "Max" || myDataToGet == "MAX")
+            {
+
+                var myMaxDose = dvh.MaxDose;
+                checkThat = myMaxDose.Dose;
+            }
+            #endregion
+            #region MIN DOSE       
+            if (myDataToGet == "min" || myDataToGet == "Min" || myDataToGet == "MIN")
+            {
+                var myMinDose = dvh.MinDose;
+                checkThat = myMinDose.Dose;
+            }
+            #endregion
+            #region MEDIAN DOSE
+            if (myDataToGet == "median" || myDataToGet == "Median" || myDataToGet == "MEDIAN")
+            {
+                DoseValue myMedianDose = myPlan.GetDoseAtVolume(myStruct, 50, VolumePresentation.Relative, DoseValuePresentation.Absolute);              
+                checkThat = myMedianDose.Dose;
+            }
+            #endregion
+            #region MEAN DOSE
+            if (myDataToGet == "mean" || myDataToGet == "Mean" || myDataToGet == "MEAN")
+            {
+                var myMeanDose = dvh.MeanDose;
+                checkThat = myMeanDose.Dose;
+            }
+            #endregion
+            #region VOLUME
+            if (myDataToGet == "vol" || myDataToGet == "Vol" || myDataToGet == "VOL")
+            {
+                checkThat = myStruct.Volume;
+            }
+            #endregion
+            #region D__% or D__cc
+            string d_at_v_pattern = @"^D(?<evalpt>\d+\p{P}\d+|\d+)(?<unit>(%|cc))$"; // matches D95%, D2cc
+            var testMatch = Regex.Matches(myDataToGet, d_at_v_pattern);
+            if (testMatch.Count != 0) // count is 1 if D95% or D2cc
+            {
+                Group eval = testMatch[0].Groups["evalpt"];
+                Group unit = testMatch[0].Groups["unit"];
+                DoseValue.DoseUnit du = DoseValue.DoseUnit.Gy;
+                DoseValue myD_something = new DoseValue(1000.1000, du);
+                //DoseValue myD_something;
+                double myD = Convert.ToDouble(eval.Value);
+                if (unit.Value == "%")
+                {
+                    myD_something = myPlan.GetDoseAtVolume(myStruct, myD, VolumePresentation.Relative, DoseValuePresentation.Absolute);
+                    checkThat = myD_something.Dose;
+                }
+                else if (unit.Value == "cc")
+                {
+                    myD_something = myPlan.GetDoseAtVolume(myStruct, myD, VolumePresentation.AbsoluteCm3, DoseValuePresentation.Absolute);
+                    checkThat = myD_something.Dose;
+                }
+                else
+                    checkThat = -1.0;
+
+                if (verbose > 5)
+                    Console.WriteLine("Dxx {0:0.00} {1}", myD_something.Dose, myD_something.Unit);
+            }
+            #endregion
+            #region V__Gy
+            string v_at_d_pattern = @"^V(?<evalpt>\d+\p{P}\d+|\d+)(?<unit>(%|cc))$"; // matches V50.4cc or V50.4% 
+            //var
+            testMatch = Regex.Matches(myDataToGet, v_at_d_pattern);
+            if (testMatch.Count != 0) // count is 1
+            {
+                Group eval = testMatch[0].Groups["evalpt"];
+                Group unit = testMatch[0].Groups["unit"];
+                DoseValue.DoseUnit du = DoseValue.DoseUnit.Gy;
+                DoseValue myRequestedDose = new DoseValue(Convert.ToDouble(eval.Value), du);
+
+                if (unit.Value == "cc")
+                    checkThat = myPlan.GetVolumeAtDose(myStruct, myRequestedDose, VolumePresentation.AbsoluteCm3);
+                else if (unit.Value == "%") 
+                    checkThat = myPlan.GetVolumeAtDose(myStruct, myRequestedDose, VolumePresentation.Relative);
+                else
+                    checkThat = -1.0;
+            }
+            #endregion
+            if (checkThat == -1.0)
+                Console.WriteLine("Impssible to obtain {0} for {1} in {2} ", myDataToGet, myStruct.Id, myPlan.Id);
+            return (checkThat);
         }
     }
 }
