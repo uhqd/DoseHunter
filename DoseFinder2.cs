@@ -1,14 +1,40 @@
 /*
- 
-Read an ID.txt file that contains only one column with patient IDs
-Read a file with these lines : 
+User input :
+The user must provide 2 files (file names MUST be id.txt and indics.txt)
+1.
+id.txt file that contains only one column with patient IDs
+2. 
+indics.txt contain the chosen indexes that the user wants to collect
+Each structure on a line with a "," to separate the fields
+First field is the structure name
+if the struct can have several version of structure name, separate them with a ;
+If several versions of a structure name are provided AND several structures really
+exists with these names, only the first is taken in account
 
+Other fields can be different indexes. Candidates are:
+vol --> volume of the structure (Vol and VOL are tolerated)
+min --> minimum dose of the structure (Gy) (Min and MIN are tolerated)
+max --> max dose of the structure (Gy) (Max and MAX are tolerated)
+mean --> mean dose of the structure (Gy) (Mean and MEAN are tolerated)
+median --> median dose of the structure (Gy) (Median and MEDIAN are tolerated)
+DXX% or DXXcc --> e.g. D95% or D2.5cc : Dose (Gy) recieved by 95% or 2.55 cc of the structure
+VXX% or VXXcc --> e.g V49.6% or V49.6cc : Volume in % or cc that recieved 49.6 Gy
+
+No relative doses are allowed. 
+
+In the following exemple the user wants to collect :
+The max dose and the Dose (Gy) recieved by 95% of the volume for structure "Coeur"
+The max dose for structure "Canal med"
+The max dose for structure that can be name "ptvCMI" OR "ptv cmi"  
+
+----
 Coeur,max,D95%
 Canal med,max
 ptvCMI;ptv cmi,max 
 
-Each column separated by a ,
-Several names of structures can be specified with ;
+Output: (in out/ dir.)
+log.txt: main information about the execution
+data.csv: all collected data
 
  */
 using System;
@@ -51,16 +77,16 @@ namespace VMS.TPS
             verbose = 1;
 
             int nPatient = 0;  // total number of patient. Must be the number of lines in ip.txt
-
             int nPatientWithAnAcceptedPlan = 0; // number of patient with at least an accepted plan
             int foundOneAcceptedPlan = 0; // bool, use to count nPatientWithAnAcceptedPlan
             int totalNumberOfPlans = 0;
             int numberOfAcceptedPlans = 0;
             int numberOfPlansForThisPatient = 0;
-            int numberOfAcceptedPlansForThisPatient = 0;
-            string idfilename = "id.txt";
-            string structsfilename = "indics.txt";
+            int numberOfAcceptedPlansForThisPatient = 0;          
+            string idfilename = "id.txt"; // Input file names can not be chosen
+            string structsfilename = "indics.txt"; // Input file names can not be chosen
             Structure struct1;
+
             #region READ THE ID FILE
             if (verbose > 5)
             {
@@ -93,7 +119,6 @@ namespace VMS.TPS
             }
 
             #endregion
-
 
             #region READ THE FILE WITH STRUCTURES AND METRICS
             if (verbose > 5)
@@ -129,10 +154,9 @@ namespace VMS.TPS
                     Console.WriteLine("line:{0}", line);
 
                 if (line != null)
-                {
-                    //string[] lineElements = line.Split(',');
-                    lineElements = line.Split(',');
-                    list_struct_name.Add(lineElements[0]);
+                {                   
+                    lineElements = line.Split(','); // lineElements is a list of the elements of a line 
+                    list_struct_name.Add(lineElements[0]); // first column is the structure name
                     if (verbose > 5)
                     {
                         Console.WriteLine("struct:{0}", lineElements[0]);
@@ -151,55 +175,51 @@ namespace VMS.TPS
 
             #endregion
 
-
             #region DELETE AND CREATE OUTPUT DIR
             string folderPath = @"./out";
-            if (!Directory.Exists(folderPath))
+            if (!Directory.Exists(folderPath)) // if out/ doesn't exist
             {
                 Directory.CreateDirectory(folderPath);
                 Console.WriteLine("Directory {0} created...", folderPath);
             }
-            else
+            else // if out/ already exists
             {
-                //string[] files = Directory.GetFiles(folderPath);
-                //foreach (string file in files)
                 var dir = new DirectoryInfo(folderPath);
-                foreach (var file in dir.GetFiles())
+                foreach (var file in dir.GetFiles()) // get files one by one in out/ to delete them
                 {
                     {
                         try
                         {
-                            file.Delete();
-                            //                            File.Delete(file);
+                            file.Delete(); // delete this file
                         }
                         catch (IOException)  // This part does not work. If an output file is open the error message is not displayed
                         {
                             Console.WriteLine("Impossible to delete a file (locked). Please close all output files\r\n");
                             Console.ReadLine();
                             return;
-
                         }
-
-
                     }
                 }
-                Directory.Delete(folderPath);
-                Directory.CreateDirectory(folderPath);
+                Directory.Delete(folderPath); // Remove out/ dir. 
+                Directory.CreateDirectory(folderPath); // Re Create out/ dir. 
                 Console.WriteLine("Directory {0} deleted and recreated...", folderPath);
             }
             #endregion
 
             #region CREATE THE OUTPUT FILES         
+            // create log file
             StreamWriter swLogFile = new StreamWriter("out/log.txt");
-            swLogFile.WriteLine("Output log\n\n\n");
+            swLogFile.WriteLine("Output log\r\n\r\n\r\n");
+            
+            // create file for output data
             StreamWriter swData = new StreamWriter("out/data.csv");    
             
             #region WRITE CSV HEAD
             swData.Write("ID,date,user");  // first 3 fields separated by a coma
-            foreach (string myString in list_struct)
+            foreach (string myString in list_struct) // loop on the lines
             {
                 lineElements = myString.Split(',');  // separate elements in a line by a ,
-                string[] myFirstName = lineElements[0].Split(';'); // separate the element (different struc names separate by a ;) 
+                string[] myFirstName = lineElements[0].Split(';'); // separate the element (different struct names separate by a ;) 
                 foreach (string myOthereMetrics in lineElements.Skip(1)) // Create a cell name: <struct name> (<dose index>)
                     swData.Write(",{0} ({1})", myFirstName[0], myOthereMetrics);
             }
@@ -210,7 +230,6 @@ namespace VMS.TPS
             #region LOOP EVERY PATIENT
             foreach (string ipp in list_patient) // loop on the patient list
             {
-
                 nPatient++; // number of patients
                 numberOfPlansForThisPatient = 0;
                 numberOfAcceptedPlansForThisPatient = 0;
@@ -233,7 +252,6 @@ namespace VMS.TPS
                         keepThisPlan = 1;
                         totalNumberOfPlans++;
                         numberOfPlansForThisPatient++;
-
                         Console.WriteLine("Plan: {0} ", plan.Id); // Verbose      
                         swLogFile.WriteLine("Plan: {0} ", plan.Id); // Verbose      
 
@@ -297,9 +315,7 @@ namespace VMS.TPS
                             {
                                 Console.WriteLine("   Total dose =  {0}  ", plan.TotalDose); // verbose
                                 swLogFile.WriteLine("   Total dose =  {0}  ", plan.TotalDose); // verbose
-
                             }
-
 
                             // write first 3 columns
                             swData.Write("{0},{1},{2}", p.Id, plan.CreationDateTime, plan.CreationUserName);
@@ -308,24 +324,25 @@ namespace VMS.TPS
                             bool foundOneStruct = false;
                             foreach (string myString in list_struct) // loop on lines of user dose index (1 by struct)
                             {
-                                lineElements = myString.Split(',');  // separate elements in a line by a ,
-                                string[] myFirstName = lineElements[0].Split(';'); // separate the element (different struc names separate by a ;) 
+                                // get separated elements of a line (separator is a ,)
+                                lineElements = myString.Split(',');
+                                // get the different possible names of the structure (separate by a ;)
+                                string[] myFirstName = lineElements[0].Split(';');  
                                 foundOneStruct = false;
                                 foreach (string myDiffStrucNames in myFirstName) // loop on the different names of a same struct
                                 {
                                     if (foundOneStruct == false)
                                     {
-                                        //Structure struct1 = ss.Structures.FirstOrDefault(x => x.Id == myDiffStrucNames);
                                         struct1 = ss.Structures.FirstOrDefault(x => x.Id == myDiffStrucNames);
-                                        if (struct1 != null)
+                                        if (struct1 != null) // does the stucture exist?
                                         {
-                                            if (!struct1.IsEmpty)
+                                            if (!struct1.IsEmpty) // Is it empty?
                                             {
                                                 foundOneStruct = true;
                                                 DVHData dvh = plan.GetDVHCumulativeData(struct1, DoseValuePresentation.Absolute, VolumePresentation.Relative, 0.1);
 
                                                 swLogFile.WriteLine("{0} found", myDiffStrucNames); // verbose
-                                                //if (verbose > 5)
+                                                if (verbose > 0)
                                                     Console.WriteLine(" {0} found", myDiffStrucNames);
                                                 foreach (string dataToGet in lineElements.Skip(1)) // loop on index
                                                 {
@@ -335,35 +352,10 @@ namespace VMS.TPS
                                                     double thisValueImLookingFor = -99.999;
                      
                                                     thisValueImLookingFor = gimmeThatBro(dataToGet, struct1, plan,dvh);
-
-                                                   
-                                                    /*if (string.IsNullOrWhiteSpace(email))
-                                                        return false;
-                                                    Console.WriteLine(" -----------------  ");
-
-                                                    try
-                                                    {
-
-                                                        string d_at_v_pattern = @"^D(?<evalpt>\d+\p{P}\d+|\d+)(?<unit>(%|cc))$"; // matches D95%, D2cc
-                                                        var testMatch = Regex.Matches(email, d_at_v_pattern);
-                                                        if (testMatch.Count != 0) //Ca matche
-                                                        {
-                                                            Group eval = testMatch[0].Groups["evalpt"];
-                                                            Group unit = testMatch[0].Groups["unit"];
-                                                            Console.WriteLine("eval is {0}", eval.Value);
-                                                            Console.WriteLine("unit is {0}", testMatch.Count);
-
-                                                            //   eval.Value ou unit.Value
-                                                        } */
-
-
-
+                                                    
+                                                    swLogFile.WriteLine("  {0} for {1} is {2:0.00}", dataToGet, struct1.Id, thisValueImLookingFor);
                                                     swData.Write(",{0:0.00}", thisValueImLookingFor);
-
-
-                                                    //float thisValueImLookingFor = gimmeThisValue(dataToGet, struct1.Id)
-
-                                                }  
+                                                }
                                             }
                                         }
                                     }                                                                      
@@ -378,9 +370,9 @@ namespace VMS.TPS
                                 }                              
                             }                            
                         }
-
-                        #endregion
                         swData.Write("\r\n");
+                        #endregion
+
                     } //end of plan loop
                     #endregion
                 } // end of course loop
@@ -392,7 +384,6 @@ namespace VMS.TPS
                 swLogFile.WriteLine("For this patient {0}/{1} accepted plans\n", numberOfAcceptedPlansForThisPatient, numberOfPlansForThisPatient);
             } // end of patient loop
             #endregion
-
 
             #region FINAL MESSAGE
             if (verbose > 0)
@@ -407,13 +398,12 @@ namespace VMS.TPS
 
             }
             #endregion
+
             #region CLOSE FILES
             swLogFile.Close();
             swData.Close();
 
             #endregion
-
-
         }
         public static double gimmeThatBro(string myDataToGet, Structure myStruct, PlanSetup myPlan, DVHData dvh)
         {
@@ -504,7 +494,7 @@ namespace VMS.TPS
             }
             #endregion
             if (checkThat == -1.0)
-                Console.WriteLine("Impssible to obtain {0} for {1} in {2} ", myDataToGet, myStruct.Id, myPlan.Id);
+                Console.WriteLine("Impossible to obtain {0} for {1} in {2} ", myDataToGet, myStruct.Id, myPlan.Id);
             return (checkThat);
         }
     }
