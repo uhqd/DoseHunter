@@ -1,10 +1,10 @@
 /*
 User input :
-The user must provide 2 files (file names MUST be id.txt and indics.txt)
+The user must provide 2 files (file names MUST be id.txt and index.txt)
 1.
 id.txt file that contains only one column with patient IDs
 2. 
-indics.txt contain the chosen indexes that the user wants to collect
+index.txt contain the chosen indexes that the user wants to collect
 Each structure on a line with a "," to separate the fields
 First field is the structure name
 if the struct can have several version of structure name, separate them with a ;
@@ -89,7 +89,7 @@ namespace VMS.TPS
             int numberOfPlansForThisPatient = 0;
             int numberOfAcceptedPlansForThisPatient = 0;          
             string idfilename = "id.txt"; // Input file names can not be chosen
-            string structsfilename = "indics.txt"; // Input file names can not be chosen
+            string structsfilename = "index.txt"; // Input file names can not be chosen
             Structure struct1;
             #endregion
 
@@ -222,7 +222,7 @@ namespace VMS.TPS
 
             #region WRITE CSV HEAD
             //swData.Write("ID,date,user");  // first 3 fields separated by a coma
-            swData.Write("ID;date;user");  // first 3 fields separated by a ;
+            swData.Write("patientID;planID;date;user");  // first 3 fields separated by a ;
             foreach (string myString in list_struct) // loop on the lines
             {
                 lineElements = myString.Split(',');  // separate elements in a line by a ,
@@ -327,7 +327,7 @@ namespace VMS.TPS
 
                             // write first 3 columns
                            // swData.Write("{0},{1},{2}", p.Id, plan.CreationDateTime, plan.CreationUserName);
-                            swData.Write("{0};{1};{2}", p.Id, plan.CreationDateTime, plan.CreationUserName);
+                            swData.Write("{0};{1};{2};{3}", p.Id, plan.Id,plan.CreationDateTime, plan.CreationUserName);
 
                             StructureSet ss = plan.StructureSet;
                             bool foundOneStruct = false;
