@@ -181,7 +181,7 @@ namespace VMS.TPS
 
             #endregion
 
-            #region DELETE AND CREATE OUTPUT DIR
+            #region DELETE AND RECREATE OUTPUT DIR
             string folderPath = @"./out";
             if (!Directory.Exists(folderPath)) // if out/ doesn't exist
             {
@@ -218,16 +218,18 @@ namespace VMS.TPS
             swLogFile.WriteLine("Output log\r\n\r\n\r\n");
             
             // create file for output data
-            StreamWriter swData = new StreamWriter("out/data.csv");    
-            
+            StreamWriter swData = new StreamWriter("out/data.csv");
+
             #region WRITE CSV HEAD
-            swData.Write("ID,date,user");  // first 3 fields separated by a coma
+            //swData.Write("ID,date,user");  // first 3 fields separated by a coma
+            swData.Write("ID;date;user");  // first 3 fields separated by a ;
             foreach (string myString in list_struct) // loop on the lines
             {
                 lineElements = myString.Split(',');  // separate elements in a line by a ,
                 string[] myFirstName = lineElements[0].Split(';'); // separate the element (different struct names separate by a ;) 
                 foreach (string myOthereMetrics in lineElements.Skip(1)) // Create a cell name: <struct name> (<dose index>)
-                    swData.Write(",{0} ({1})", myFirstName[0], myOthereMetrics);
+                    swData.Write(";{0} ({1})", myFirstName[0], myOthereMetrics);
+                //swData.Write(",{0} ({1})", myFirstName[0], myOthereMetrics);
             }
             swData.Write("\r\n"); // add a final line break
             #endregion
@@ -324,7 +326,8 @@ namespace VMS.TPS
                             }
 
                             // write first 3 columns
-                            swData.Write("{0},{1},{2}", p.Id, plan.CreationDateTime, plan.CreationUserName);
+                           // swData.Write("{0},{1},{2}", p.Id, plan.CreationDateTime, plan.CreationUserName);
+                            swData.Write("{0};{1};{2}", p.Id, plan.CreationDateTime, plan.CreationUserName);
 
                             StructureSet ss = plan.StructureSet;
                             bool foundOneStruct = false;
@@ -360,7 +363,8 @@ namespace VMS.TPS
                                                     thisValueImLookingFor = gimmeThatBro(dataToGet, struct1, plan,dvh);
                                                     
                                                     swLogFile.WriteLine("  {0} for {1} is {2:0.00}", dataToGet, struct1.Id, thisValueImLookingFor);
-                                                    swData.Write(",{0:0.00}", thisValueImLookingFor);
+                                                    swData.Write(";{0:0.00}", thisValueImLookingFor);
+                                                    //swData.Write(",{0:0.00}", thisValueImLookingFor);
                                                 }
                                             }
                                         }
@@ -372,7 +376,8 @@ namespace VMS.TPS
                                     Console.WriteLine(" Cannot find the structure {0} with this name or other names", myFirstName[0]);
                                     swLogFile.WriteLine(" Cannot find the structure {0} with this name or other names", myFirstName[0]);
                                     foreach (string skippedData in lineElements.Skip(1))
-                                        swData.Write(",");
+                                        swData.Write(";");
+                                    //swData.Write(",");
                                 }                              
                             }                            
                         }
