@@ -72,12 +72,23 @@ namespace VMS.TPS
         #region EXECUTE PROGRAM, THE REAL MAIN
         static void Execute(Application app)
         {
+            #region WELCOME MESSAGE
+            Console.WriteLine("-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-");
+            Console.WriteLine("");
+            Console.WriteLine("     D O S E   H U N T E R ");
+            Console.WriteLine("");
+            Console.WriteLine("        Luc SIMON, 2021");
+            Console.WriteLine("");
+            Console.WriteLine("-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-");
+            #endregion
+
             #region DECLARATION OF VARIABLES
             List<string> list_patient = new List<string>();
             List<string> list_struct = new List<string>();
             List<string> list_struct_name = new List<string>();
             String line;
             string[] lineElements;
+            string[] filterTags;
             int verbose;
             verbose = 1;
 
@@ -90,7 +101,12 @@ namespace VMS.TPS
             int numberOfAcceptedPlansForThisPatient = 0;          
             string idfilename = "id.txt"; // Input file names can not be chosen
             string structsfilename = "index.txt"; // Input file names can not be chosen
+            string planfilterfilename = "planfilter.txt"; // Input file names can not be chosen
             Structure struct1;
+            double minTotalDose, maxTotalDose;
+            bool keepUnapprovedPlan,keepPAapprovedPlan,keepTAapprovedPlan,keepNamedPlan,keepUnamedPlan;
+            bool keepIfPlanNameContainAstring, excludeIfPlannedNameContainAString;
+            string stringToContainToBeKept, stringToContainToBeExcluded;
             #endregion
 
             #region READ THE ID FILE
@@ -123,6 +139,145 @@ namespace VMS.TPS
                 Console.WriteLine("ID FILE OPEN.....OK\n");
                 Console.ReadLine();
             }
+
+            #endregion
+
+            #region READ THE PLAN FILTER FILE
+            if (verbose > 5)
+            {
+                Console.WriteLine("PLAN FILTER FILE OPEN.....START\n");
+                Console.ReadLine();
+            }
+            // Open a text file to read patient ID. Text file must contains IDs, one by line
+
+            // DEFAULT FILTER VALUES :
+            minTotalDose = 60.0;
+            maxTotalDose = 80.0;
+            keepNamedPlan = true;
+            keepUnamedPlan = true;
+            keepPAapprovedPlan = false;
+            keepTAapprovedPlan = false;
+            keepUnapprovedPlan = true;
+            keepIfPlanNameContainAstring = false;
+            excludeIfPlannedNameContainAString = false;
+            stringToContainToBeKept = "toto";
+            stringToContainToBeExcluded = "toto";
+
+            if (!File.Exists(planfilterfilename))
+            {
+                Console.WriteLine("Can't find file {0}\r\n", planfilterfilename);
+                Console.WriteLine("Default filters will be used\r\n");
+
+                Console.ReadLine();
+
+            }
+            else
+            {
+                StreamReader srf = new StreamReader(planfilterfilename);
+                line = "start";
+                while (line != null)
+                {
+                    line = srf.ReadLine();
+                    if (line != null)
+                    {
+                        filterTags = line.Split(':');
+                        if (filterTags[0] == "Min Total Dose (Gy)")
+                        {
+                            minTotalDose = Convert.ToDouble(filterTags[1]);
+                        }
+                        if (filterTags[0] == "Max Total Dose (Gy)")
+                        {
+                            maxTotalDose = Convert.ToDouble(filterTags[1]);
+                        }
+                        if (filterTags[0] == "TreatApproved plan")
+                        {
+                            if (filterTags[1] == "yes")
+                                keepTAapprovedPlan = true;
+                            else if (filterTags[1] == "no")
+                                keepTAapprovedPlan = false;
+                            else
+                                Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
+                        }
+                        if (filterTags[0] == "PlanningApproved plan")
+                        {
+                            if (filterTags[1] == "yes")
+                                keepPAapprovedPlan = true;
+                            else if (filterTags[1] == "no")
+                                keepPAapprovedPlan = false;
+                            else
+                                Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
+                        }
+                        if (filterTags[0] == "Unapproved plan")
+                        {
+                            if (filterTags[1] == "yes")
+                                keepUnapprovedPlan = true;
+                            else if (filterTags[1] == "no")
+                                keepUnapprovedPlan = false;
+                            else
+                                Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
+                        }
+                        if (filterTags[0] == "Named plan")
+                        {
+                            if (filterTags[1] == "yes")
+                                keepNamedPlan = true;
+                            else if (filterTags[1] == "no")
+                                keepNamedPlan = false;
+                            else
+                                Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
+                        }
+                        if (filterTags[0] == "Unnamed plan")
+                        {
+                            if (filterTags[1] == "yes")
+                                keepUnamedPlan = true;
+                            else if (filterTags[1] == "no")
+                                keepUnamedPlan = false;
+                            else
+                                Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
+                        }
+                        if (filterTags[0] == "Plan name must contain a string")
+                        {
+                            if (filterTags[1] == "yes")
+                            {
+                                keepIfPlanNameContainAstring = true;
+                                stringToContainToBeKept = filterTags[2];
+                            }
+                            else if (filterTags[1] == "no")
+                                keepIfPlanNameContainAstring = false;
+                            else
+                                Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
+                        }
+                        if (filterTags[0] == "Exclude if plan name contains")
+                        {
+                            if (filterTags[1] == "yes")
+                            {
+                                excludeIfPlannedNameContainAString = true;
+                                stringToContainToBeExcluded = filterTags[2];
+                            }
+                            else if (filterTags[1] == "no")
+                                excludeIfPlannedNameContainAString = false;
+                            else
+                                Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
+                        }
+                    }
+                }
+                srf.Close();
+            }
+
+            
+            #region RECAP FILTERS
+            Console.WriteLine("\r\n\r\nPlans filters. The following plans will be used to select the plans:");
+            Console.WriteLine("Total dose between {0:0.00} and {1:0.00} Gy", minTotalDose, maxTotalDose);
+            Console.WriteLine("Keep planning approved plans?\t{0}", keepPAapprovedPlan);
+            Console.WriteLine("Keep treatment approved plans?\t{0}", keepTAapprovedPlan);
+            Console.WriteLine("Keep unapproved plans?\t{0}", keepUnapprovedPlan);
+            Console.WriteLine("Keep plans containing a particular string?\t{0}", keepIfPlanNameContainAstring);
+            if (keepIfPlanNameContainAstring)
+                Console.WriteLine(" String is: '{0}'", stringToContainToBeKept);
+            Console.WriteLine("Exclude plans containing a particular string?\t{0}", excludeIfPlannedNameContainAString);
+            if (excludeIfPlannedNameContainAString)
+                Console.WriteLine(" String is: '{0}'", stringToContainToBeExcluded);
+            Console.WriteLine("\r\n\r\n\r\n");
+            #endregion
 
             #endregion
 
@@ -265,37 +420,92 @@ namespace VMS.TPS
 
                         #region TEST THE PLAN
 
-                        #region OK IF THE PLAN HAS NO NAME
-                        /* if (plan.Name == "")  // For tomo, plan with a name makes the script fail
-                             keepThisPlan = keepThisPlan * 1; // Actually it doesn't. This test must be removed
-                         else
-                         {
-                             keepThisPlan = keepThisPlan * 0;
-                             Console.WriteLine("         refused: THE PLAN HAS A NAME");
-                         }*/
-                        #endregion
-                        #region OK IF THE PLAN IS UNAPPROVED
-                        if (keepThisPlan == 1) // For tomo good plans are unapproved
-                            if (plan.ApprovalStatus == PlanSetupApprovalStatus.UnApproved)
-                                keepThisPlan = keepThisPlan * 1; // 1321
-                            else
+                        #region TEST IF THE PLAN HAS A NAME
+
+                     
+                        if (keepNamedPlan == false) // dont keep  plans with a name
+                        {
+                            if (plan.Name != "")  // if  name exist
                             {
                                 keepThisPlan = keepThisPlan * 0;
-                                Console.WriteLine("         refused: THE PLAN IS APPROVED");
-                                swLogFile.WriteLine("         refused: THE PLAN IS APPROVED");
-
+                                Console.WriteLine("         refused: THE PLAN HAS A NAME");
+                                swLogFile.WriteLine("         refused: THE PLAN HAS A NAME ");
+                            }                          
+                        }
+                        if (keepUnamedPlan == false) // dont keep plans with no name
+                        {
+                            if (plan.Name == "")  // if  no name 
+                            {
+                                keepThisPlan = keepThisPlan * 0;
+                                Console.WriteLine("         refused: THE PLAN HAS NO NAME");
+                                swLogFile.WriteLine("         refused: THE PLAN HAS NO NAME ");
+                            }
+                        }
+                        #endregion
+                        #region TEST IF THE PLAN APPROBATION
+                        if (keepTAapprovedPlan == false) // dont keep  Treat approved plans
+                        {
+                            if (plan.ApprovalStatus == PlanSetupApprovalStatus.TreatmentApproved)  // if  treat approve
+                            {
+                                keepThisPlan = keepThisPlan * 0;
+                                Console.WriteLine("         refused: THE PLAN IS TREAT APPROVED");
+                                swLogFile.WriteLine("         refused: THE PLAN IS TREAT APPROVED");
+                            }
+                        }
+                        if (keepPAapprovedPlan == false) // dont keep  planning approved plans
+                        {
+                            if (plan.ApprovalStatus == PlanSetupApprovalStatus.PlanningApproved)  // if  plan approve
+                            {
+                                keepThisPlan = keepThisPlan * 0;
+                                Console.WriteLine("         refused: THE PLAN IS PLAN APPROVED");
+                                swLogFile.WriteLine("         refused: THE PLAN IS PLAN APPROVED");
+                            }
+                        }
+                        if (keepUnapprovedPlan == false) // dont keep   unapproved plans
+                        {
+                            if (plan.ApprovalStatus == PlanSetupApprovalStatus.UnApproved)  // if  plan approve
+                            {
+                                keepThisPlan = keepThisPlan * 0;
+                                Console.WriteLine("         refused: THE PLAN IS UNAPPROVED");
+                                swLogFile.WriteLine("         refused: THE PLAN IS UNAPPROVED");
+                            }
+                        }
+                        #endregion
+                        #region TEST IF TOTAL DOSE BETWEEN MIN AND MAX
+                        if (plan.TotalDose.Dose < minTotalDose || plan.TotalDose.Dose > maxTotalDose)
+                            {
+                                keepThisPlan = keepThisPlan * 0;
+                                Console.WriteLine("         refused: TOTAL DOSE {0} is not between {1} and {2}",plan.TotalDose.Dose,minTotalDose,maxTotalDose);
+                                swLogFile.WriteLine("         refused: TOTAL DOSE {0} is not between {1} and {2}", plan.TotalDose.Dose, minTotalDose, maxTotalDose);
                             }
                         #endregion
-                        #region OK IF TOTAL DOSE > 60
-                        if (keepThisPlan == 1)  // check the dose is realistic i.e. > 10
-                            if (plan.TotalDose.Dose >= 60.0)
+                        #region TEST IF PLAN CONTAINS OR DOES NOT CONTAIN A CHOSEN STRING
+                        if (keepIfPlanNameContainAstring)
+                        {
+                            if (plan.Id.Contains(stringToContainToBeKept))
                                 keepThisPlan = keepThisPlan * 1;
                             else
                             {
                                 keepThisPlan = keepThisPlan * 0;
-                                Console.WriteLine("         refused: TOTAL DOSE < 60");
-                                swLogFile.WriteLine("         refused: TOTAL DOSE < 60");
+                                Console.WriteLine("         refused: plan ID ({0}) does not contain '{1}'", plan.Id,stringToContainToBeKept);
+                                swLogFile.WriteLine("         refused: plan ID ({0}) does not contain '{1}'", plan.Id, stringToContainToBeKept);
+
                             }
+                        }
+
+                        if (excludeIfPlannedNameContainAString)
+                        {
+                            if (plan.Id.Contains(stringToContainToBeExcluded))
+                            {
+                                keepThisPlan = keepThisPlan * 0;
+                                Console.WriteLine("         refused: plan ID ({0}) does contain '{1}'", plan.Id, stringToContainToBeExcluded);
+                                swLogFile.WriteLine("         refused: plan ID ({0}) does  contain '{1}'", plan.Id, stringToContainToBeExcluded);
+
+                            }
+                            else
+                                keepThisPlan = keepThisPlan * 1;
+                        }
+                       
                         #endregion
 
                         #endregion
