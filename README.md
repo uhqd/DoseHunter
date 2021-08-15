@@ -7,7 +7,7 @@
 
 DoseHunter is a stand-alone executable for Varian Eclipse V15.x. DoseHunter automatically collects dose data (dose max, dose min, D95\%, etc.) for a large number of patients in your database. DoseHunter creates a .csv file with your data that can be easily analyzed with Excel, Python...
 
- Please read the user guide.
+ Please read the [user guide](https://github.com/uhqd/DoseHunter/blob/master/Dose_Hunter_User_Guide.pdf).
 
 ## Authors
 
