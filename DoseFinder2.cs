@@ -265,7 +265,7 @@ namespace VMS.TPS
 
             
             #region RECAP FILTERS
-            Console.WriteLine("\r\n\r\nPlans filters. The following plans will be used to select the plans:");
+            Console.WriteLine("\r\n\r\nPlans filters. The following filters will be used to select the plans:");
             Console.WriteLine("Total dose between {0:0.00} and {1:0.00} Gy", minTotalDose, maxTotalDose);
             Console.WriteLine("Keep planning approved plans?\t{0}", keepPAapprovedPlan);
             Console.WriteLine("Keep treatment approved plans?\t{0}", keepTAapprovedPlan);
@@ -589,9 +589,10 @@ namespace VMS.TPS
                                         swData.Write(";");
                                     //swData.Write(",");
                                 }                              
-                            }                            
+                            }
+                            swData.Write("\r\n");
                         }
-                        swData.Write("\r\n");
+                        //swData.Write("\r\n");
                         #endregion
 
                     } //end of plan loop

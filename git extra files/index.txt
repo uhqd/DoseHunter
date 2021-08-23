@@ -1,0 +1,5 @@
+Heart,max,D95%
+Liver,max,min,V1.1%
+Stomach;stomach,max
+cami;camo;camuin,max,max,toto
+
