@@ -51,8 +51,11 @@ namespace VMS.TPS
 {
     class Program
     {
+        
         [STAThread]
         #region EMPTY MAIN PROGRAM
+
+       
         static void Main(string[] args)
         {
             try
@@ -89,6 +92,7 @@ namespace VMS.TPS
             String line;
             string[] lineElements;
             string[] filterTags;
+            bool isADoublon = false;
             int verbose;
             verbose = 1;
 
@@ -122,15 +126,31 @@ namespace VMS.TPS
                 Console.ReadLine();
                 return;
             }
+          
             StreamReader sr = new StreamReader(idfilename);
+            line = sr.ReadLine(); // read first line
+            if ((line != null) && (line.Length > 2)) // an ID Must be > 2 characters
+                list_patient.Add(line);
 
-            line = sr.ReadLine();
-            list_patient.Add(line);
             while (line != null)
             {
                 line = sr.ReadLine();
-                if (line != null)
-                    list_patient.Add(line);
+                #region TEST IF ID IS A DOUBLON
+                foreach (string ipp in list_patient) // loop on the patient list
+                {
+                    if (isADoublon == false)
+                        if (ipp == line)
+                            isADoublon = true;
+                }
+                #endregion
+                if ((line != null) && (line.Length > 2)) // an ID Must be > 2 characters
+                    if (isADoublon == false)
+                        list_patient.Add(line);
+                    else
+                    {
+                        isADoublon = false;
+                        //Console.WriteLine(" {0} is a doublon\n", line);
+                    }
             }
             sr.Close();
 
@@ -139,7 +159,7 @@ namespace VMS.TPS
                 Console.WriteLine("ID FILE OPEN.....OK\n");
                 Console.ReadLine();
             }
-
+     
             #endregion
 
             #region READ THE PLAN FILTER FILE
@@ -611,11 +631,11 @@ namespace VMS.TPS
             {
                 Console.WriteLine("Number of accepted/total patients: {1}/{0} (accepted : at least one accepted plan)", nPatient, nPatientWithAnAcceptedPlan);
                 Console.WriteLine("Number of accepted/total plans: {0}/{1}", numberOfAcceptedPlans, totalNumberOfPlans);
-                Console.WriteLine("Pleas type Enter\n");
+                Console.WriteLine("Please type Enter\n");
                 Console.ReadLine(); // Ask user to type enter to finish.
                 swLogFile.WriteLine("Number of accepted/total patients: {1}/{0} (accepted : at least one accepted plan)", nPatient, nPatientWithAnAcceptedPlan);
                 swLogFile.WriteLine("Number of accepted/total plans: {0}/{1}", numberOfAcceptedPlans, totalNumberOfPlans);
-                swLogFile.WriteLine("Pleas type Enter\n");
+                swLogFile.WriteLine("Please type Enter\n");
 
             }
             #endregion
