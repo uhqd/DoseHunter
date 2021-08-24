@@ -475,8 +475,8 @@ namespace VMS.TPS
                         if (plan.TotalDose.Dose < minTotalDose || plan.TotalDose.Dose > maxTotalDose)
                             {
                                 keepThisPlan = keepThisPlan * 0;
-                                Console.WriteLine("         refused: TOTAL DOSE {0} is not between {1} and {2}",plan.TotalDose.Dose,minTotalDose,maxTotalDose);
-                                swLogFile.WriteLine("         refused: TOTAL DOSE {0} is not between {1} and {2}", plan.TotalDose.Dose, minTotalDose, maxTotalDose);
+                                Console.WriteLine("         refused: Total dose ({0:0.00} Gy) is not between {1} and {2} Gy",plan.TotalDose.Dose,minTotalDose,maxTotalDose);
+                                swLogFile.WriteLine("         refused: Total dose ({0:0.00} Gy) is not between {1} and {2} Gy", plan.TotalDose.Dose, minTotalDose, maxTotalDose);
                             }
                         #endregion
                         #region TEST IF PLAN CONTAINS OR DOES NOT CONTAIN A CHOSEN STRING
