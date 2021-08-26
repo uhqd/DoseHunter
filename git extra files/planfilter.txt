@@ -3,19 +3,25 @@
 # DO NO MODIFY THIS FILE EXCEPT THE PART AFTER THE ":"
 
 # keep only the plans with a total dose > to a value
-Min Total Dose (Gy):60.0
+Min Total Dose (Gy):59.0
 
 # keep only the plans with a total dose < to a value
-Max Total Dose (Gy):200.0
+Max Total Dose (Gy):90
 
 # Treat approved? If "no" treat approved plans will be excluded. 
-TreatApproved plan:no
+TreatApproved plan:yes
 
 # Planning approved? If "no" planning approved plans will be excluded. 
 PlanningApproved plan:no
 
 # Unapproved? If "no" unapproved plans will be excluded. 
-Unapproved plan:yes
+Unapproved plan:no
+
+# Refused? If "no" refused plans will be excluded. 
+Refused plan:no
+
+# Retired? If "no" retired plans will be excluded. 
+Retired plan:no
 
 # Named plans? If "no", plans with a name will be excluded. 
 Named plan:yes
@@ -24,7 +30,7 @@ Named plan:yes
 Unnamed plan:yes
 
 # keep it if it contains a string? If "yes", plans will be kept only if they contain the string 
-Plan name must contain a string:no:toto
+Plan name must contain a string:yes:ro
 
 # Exclude it if it contains a string? If "yes", plans will refused if they contain the string 
 Exclude if plan name contains:no:toto
