@@ -51,11 +51,11 @@ namespace VMS.TPS
 {
     class Program
     {
-        
+
         [STAThread]
         #region EMPTY MAIN PROGRAM
 
-       
+
         static void Main(string[] args)
         {
             try
@@ -94,21 +94,24 @@ namespace VMS.TPS
             string[] filterTags;
             bool isADoublon = false;
             int verbose;
+            //verbose = 9;
             verbose = 1;
 
             int nPatient = 0;  // total number of patient. Must be the number of lines in ip.txt
+            int nDoublons = 0;
             int nPatientWithAnAcceptedPlan = 0; // number of patient with at least an accepted plan
             int foundOneAcceptedPlan = 0; // bool, use to count nPatientWithAnAcceptedPlan
             int totalNumberOfPlans = 0;
             int numberOfAcceptedPlans = 0;
             int numberOfPlansForThisPatient = 0;
-            int numberOfAcceptedPlansForThisPatient = 0;          
+            int numberOfAcceptedPlansForThisPatient = 0;
             string idfilename = "id.txt"; // Input file names can not be chosen
             string structsfilename = "index.txt"; // Input file names can not be chosen
             string planfilterfilename = "planfilter.txt"; // Input file names can not be chosen
             Structure struct1;
             double minTotalDose, maxTotalDose;
-            bool keepUnapprovedPlan,keepPAapprovedPlan,keepTAapprovedPlan,keepNamedPlan,keepUnamedPlan;
+            bool keepUnapprovedPlan, keepPAapprovedPlan, keepTAapprovedPlan;
+            bool keepNamedPlan, keepUnamedPlan,keepRefusedPlan,keepRetiredPlan;
             bool keepIfPlanNameContainAstring, excludeIfPlannedNameContainAString;
             string stringToContainToBeKept, stringToContainToBeExcluded;
             #endregion
@@ -126,7 +129,7 @@ namespace VMS.TPS
                 Console.ReadLine();
                 return;
             }
-          
+
             StreamReader sr = new StreamReader(idfilename);
             line = sr.ReadLine(); // read first line
             if ((line != null) && (line.Length > 2)) // an ID Must be > 2 characters
@@ -148,6 +151,7 @@ namespace VMS.TPS
                         list_patient.Add(line);
                     else
                     {
+                        nDoublons++;
                         isADoublon = false;
                         //Console.WriteLine(" {0} is a doublon\n", line);
                     }
@@ -159,7 +163,7 @@ namespace VMS.TPS
                 Console.WriteLine("ID FILE OPEN.....OK\n");
                 Console.ReadLine();
             }
-     
+
             #endregion
 
             #region READ THE PLAN FILTER FILE
@@ -175,6 +179,8 @@ namespace VMS.TPS
             maxTotalDose = 80.0;
             keepNamedPlan = true;
             keepUnamedPlan = true;
+            keepRefusedPlan = true;
+            keepRetiredPlan = true;
             keepPAapprovedPlan = false;
             keepTAapprovedPlan = false;
             keepUnapprovedPlan = true;
@@ -254,6 +260,24 @@ namespace VMS.TPS
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
+                        if (filterTags[0] == "Refused plan")
+                        {
+                            if (filterTags[1] == "yes")
+                                keepRefusedPlan = true;
+                            else if (filterTags[1] == "no")
+                                keepRefusedPlan = false;
+                            else
+                                Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
+                        }
+                        if (filterTags[0] == "Retired plan")
+                        {
+                            if (filterTags[1] == "yes")
+                                keepRetiredPlan = true;
+                            else if (filterTags[1] == "no")
+                                keepRetiredPlan = false;
+                            else
+                                Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
+                        }
                         if (filterTags[0] == "Plan name must contain a string")
                         {
                             if (filterTags[1] == "yes")
@@ -283,13 +307,17 @@ namespace VMS.TPS
                 srf.Close();
             }
 
-            
+
             #region RECAP FILTERS
             Console.WriteLine("\r\n\r\nPlans filters. The following filters will be used to select the plans:");
             Console.WriteLine("Total dose between {0:0.00} and {1:0.00} Gy", minTotalDose, maxTotalDose);
             Console.WriteLine("Keep planning approved plans?\t{0}", keepPAapprovedPlan);
             Console.WriteLine("Keep treatment approved plans?\t{0}", keepTAapprovedPlan);
+            Console.WriteLine("Keep retired plans?\t{0}", keepRetiredPlan);
+            Console.WriteLine("Keep refused plans?\t{0}", keepRefusedPlan);
             Console.WriteLine("Keep unapproved plans?\t{0}", keepUnapprovedPlan);
+            Console.WriteLine("Keep named plans?\t{0}", keepNamedPlan);
+            Console.WriteLine("Keep unamed plans?\t{0}", keepUnamedPlan);
             Console.WriteLine("Keep plans containing a particular string?\t{0}", keepIfPlanNameContainAstring);
             if (keepIfPlanNameContainAstring)
                 Console.WriteLine(" String is: '{0}'", stringToContainToBeKept);
@@ -335,13 +363,13 @@ namespace VMS.TPS
                     Console.WriteLine("line:{0}", line);
 
                 if (line != null)
-                {                   
+                {
                     lineElements = line.Split(','); // lineElements is a list of the elements of a line 
                     list_struct_name.Add(lineElements[0]); // first column is the structure name
                     if (verbose > 5)
                     {
                         Console.WriteLine("struct:{0}", lineElements[0]);
-                        Console.ReadLine();
+                        // Console.ReadLine();
                     }
                 }
             }
@@ -391,7 +419,7 @@ namespace VMS.TPS
             // create log file
             StreamWriter swLogFile = new StreamWriter("out/log.txt");
             swLogFile.WriteLine("Output log\r\n\r\n\r\n");
-            
+
             // create file for output data
             StreamWriter swData = new StreamWriter("out/data.csv");
 
@@ -407,6 +435,11 @@ namespace VMS.TPS
                 //swData.Write(",{0} ({1})", myFirstName[0], myOthereMetrics);
             }
             swData.Write("\r\n"); // add a final line break
+            if (verbose > 5)
+            {
+                Console.WriteLine("OUTPUT FILE INITATED.....OK\n");
+                Console.ReadLine();
+            }
             #endregion
             #endregion
 
@@ -424,6 +457,8 @@ namespace VMS.TPS
                 {
                     Console.WriteLine("{1} {0}", p.Name, nPatient); // verbose
                     swLogFile.WriteLine("{1} {0}\n\n\n", p.Name, nPatient);
+                    if (verbose > 5)
+                        Console.ReadLine();
                 }
                 int keepThisPlan = 1;
                 #region LOOP EVERY COURSE
@@ -432,102 +467,162 @@ namespace VMS.TPS
                     #region LOOP EVERY PLAN
                     foreach (PlanSetup plan in course.PlanSetups) // loop on the plans
                     {
+                        #region VERBOSE
+                        if (verbose > 5)
+                        {
+                            Console.WriteLine("Inspect Course: {0} Plan: {1}", course.Id, plan.Id); // verbose
+                            Console.ReadLine();
+                        }
+                        #endregion
+
                         keepThisPlan = 1;
                         totalNumberOfPlans++;
                         numberOfPlansForThisPatient++;
                         Console.WriteLine("Plan: {0} ", plan.Id); // Verbose      
                         swLogFile.WriteLine("Plan: {0} ", plan.Id); // Verbose      
 
+
                         #region TEST THE PLAN
 
-                        #region TEST IF THE PLAN HAS A NAME
+                        #region EXCLUDE ALL PLANS WITH NO BEAM
+                        try                     // this exception
+                        {
+                            plan.Beams.Count(); // manages plans with no beams. they make the program crash
+                        }
+                        catch
+                        {
+                            Console.WriteLine("         refused: THE PLAN HAS NO BEAM");
+                            swLogFile.WriteLine("         refused: THE PLAN HAS NO BEAM ");
+                            keepThisPlan = 0;
+                        }
+                        #endregion
+                        #region EXCLUDE ALL PLANS WITH NO VALID DOSE
+                        if (keepThisPlan == 1)
+                        {
+                            if (plan.IsDoseValid == false)
+                            {
+                                Console.WriteLine("         refused: THE PLAN HAS NO VALID DOSE");
+                                swLogFile.WriteLine("         refused: THE PLAN HAS NO NO VALID DOSE ");
+                                keepThisPlan = 0;
+                            }
+                        }
+                        #endregion
+                        if (keepThisPlan == 1)
+                        {
+                            #region TEST IF THE PLAN HAS A NAME
 
-                     
-                        if (keepNamedPlan == false) // dont keep  plans with a name
-                        {
-                            if (plan.Name != "")  // if  name exist
+
+                            if (keepNamedPlan == false) // dont keep  plans with a name
                             {
-                                keepThisPlan = keepThisPlan * 0;
-                                Console.WriteLine("         refused: THE PLAN HAS A NAME");
-                                swLogFile.WriteLine("         refused: THE PLAN HAS A NAME ");
-                            }                          
-                        }
-                        if (keepUnamedPlan == false) // dont keep plans with no name
-                        {
-                            if (plan.Name == "")  // if  no name 
-                            {
-                                keepThisPlan = keepThisPlan * 0;
-                                Console.WriteLine("         refused: THE PLAN HAS NO NAME");
-                                swLogFile.WriteLine("         refused: THE PLAN HAS NO NAME ");
+                                if (plan.Name != "")  // if  name exist
+                                {
+                                    keepThisPlan = keepThisPlan * 0;
+                                    Console.WriteLine("         refused: THE PLAN HAS A NAME");
+                                    swLogFile.WriteLine("         refused: THE PLAN HAS A NAME ");
+                                }
                             }
-                        }
-                        #endregion
-                        #region TEST IF THE PLAN APPROBATION
-                        if (keepTAapprovedPlan == false) // dont keep  Treat approved plans
-                        {
-                            if (plan.ApprovalStatus == PlanSetupApprovalStatus.TreatmentApproved)  // if  treat approve
+                            if (keepUnamedPlan == false) // dont keep plans with no name
                             {
-                                keepThisPlan = keepThisPlan * 0;
-                                Console.WriteLine("         refused: THE PLAN IS TREAT APPROVED");
-                                swLogFile.WriteLine("         refused: THE PLAN IS TREAT APPROVED");
+                                if (plan.Name == "")  // if  no name 
+                                {
+                                    keepThisPlan = keepThisPlan * 0;
+                                    Console.WriteLine("         refused: THE PLAN HAS NO NAME");
+                                    swLogFile.WriteLine("         refused: THE PLAN HAS NO NAME ");
+                                }
                             }
-                        }
-                        if (keepPAapprovedPlan == false) // dont keep  planning approved plans
-                        {
-                            if (plan.ApprovalStatus == PlanSetupApprovalStatus.PlanningApproved)  // if  plan approve
+                            #endregion
+                            #region TEST THE PLAN APPROBATION
+                            if (keepTAapprovedPlan == false) // dont keep  Treat approved plans
                             {
-                                keepThisPlan = keepThisPlan * 0;
-                                Console.WriteLine("         refused: THE PLAN IS PLAN APPROVED");
-                                swLogFile.WriteLine("         refused: THE PLAN IS PLAN APPROVED");
+                                if (plan.ApprovalStatus == PlanSetupApprovalStatus.TreatmentApproved)  // if  treat approve
+                                {
+                                    keepThisPlan = keepThisPlan * 0;
+                                    Console.WriteLine("         refused: THE PLAN IS TREAT APPROVED");
+                                    swLogFile.WriteLine("         refused: THE PLAN IS TREAT APPROVED");
+                                }
                             }
-                        }
-                        if (keepUnapprovedPlan == false) // dont keep   unapproved plans
-                        {
-                            if (plan.ApprovalStatus == PlanSetupApprovalStatus.UnApproved)  // if  plan approve
+                            if (keepPAapprovedPlan == false) // dont keep  planning approved plans
                             {
-                                keepThisPlan = keepThisPlan * 0;
-                                Console.WriteLine("         refused: THE PLAN IS UNAPPROVED");
-                                swLogFile.WriteLine("         refused: THE PLAN IS UNAPPROVED");
+                                if (plan.ApprovalStatus == PlanSetupApprovalStatus.PlanningApproved)  // if  plan approve
+                                {
+                                    keepThisPlan = keepThisPlan * 0;
+                                    Console.WriteLine("         refused: THE PLAN IS PLAN APPROVED");
+                                    swLogFile.WriteLine("         refused: THE PLAN IS PLAN APPROVED");
+                                }
                             }
-                        }
-                        #endregion
-                        #region TEST IF TOTAL DOSE BETWEEN MIN AND MAX
-                        if (plan.TotalDose.Dose < minTotalDose || plan.TotalDose.Dose > maxTotalDose)
+                            if (keepUnapprovedPlan == false) // dont keep   unapproved plans
+                            {
+                                if (plan.ApprovalStatus == PlanSetupApprovalStatus.UnApproved)  // if  plan approve
+                                {
+                                    keepThisPlan = keepThisPlan * 0;
+                                    Console.WriteLine("         refused: THE PLAN IS UNAPPROVED");
+                                    swLogFile.WriteLine("         refused: THE PLAN IS UNAPPROVED");
+                                }
+                            }
+                            if (keepRefusedPlan == false) // dont keep refused plans
+                            {
+                                if (plan.ApprovalStatus == PlanSetupApprovalStatus.Rejected)  // if  plan rejected
+                                {
+                                    keepThisPlan = keepThisPlan * 0;
+                                    Console.WriteLine("         refused: THE PLAN STATUS IS REFUSED");
+                                    swLogFile.WriteLine("         refused: THE PLAN STATUS IS REFUSED");
+                                }
+                            }
+                            if (keepRetiredPlan == false) // dont keep retired plans
+                            {
+                                if (plan.ApprovalStatus == PlanSetupApprovalStatus.Retired)  // if  plan retired
+                                {
+                                    keepThisPlan = keepThisPlan * 0;
+                                    Console.WriteLine("         refused: THE PLAN STATUS IS RETIRED");
+                                    swLogFile.WriteLine("         refused: THE PLAN STATUS IS RETIRED");
+                                }
+                            }
+
+                            #endregion
+                            #region TEST IF TOTAL DOSE BETWEEN MIN AND MAX
+                            if (plan.TotalDose.Dose < minTotalDose || plan.TotalDose.Dose > maxTotalDose)
                             {
                                 keepThisPlan = keepThisPlan * 0;
-                                Console.WriteLine("         refused: Total dose ({0:0.00} Gy) is not between {1} and {2} Gy",plan.TotalDose.Dose,minTotalDose,maxTotalDose);
+                                Console.WriteLine("         refused: Total dose ({0:0.00} Gy) is not between {1} and {2} Gy", plan.TotalDose.Dose, minTotalDose, maxTotalDose);
                                 swLogFile.WriteLine("         refused: Total dose ({0:0.00} Gy) is not between {1} and {2} Gy", plan.TotalDose.Dose, minTotalDose, maxTotalDose);
                             }
-                        #endregion
-                        #region TEST IF PLAN CONTAINS OR DOES NOT CONTAIN A CHOSEN STRING
-                        if (keepIfPlanNameContainAstring)
-                        {
-                            if (plan.Id.Contains(stringToContainToBeKept))
-                                keepThisPlan = keepThisPlan * 1;
-                            else
+                            #endregion
+                            #region TEST IF PLAN CONTAINS OR DOES NOT CONTAIN A CHOSEN STRING
+                            if (keepIfPlanNameContainAstring)
                             {
-                                keepThisPlan = keepThisPlan * 0;
-                                Console.WriteLine("         refused: plan ID ({0}) does not contain '{1}'", plan.Id,stringToContainToBeKept);
-                                swLogFile.WriteLine("         refused: plan ID ({0}) does not contain '{1}'", plan.Id, stringToContainToBeKept);
+                                if (plan.Id.Contains(stringToContainToBeKept))
+                                    keepThisPlan = keepThisPlan * 1;
+                                else
+                                {
+                                    keepThisPlan = keepThisPlan * 0;
+                                    Console.WriteLine("         refused: plan ID ({0}) does not contain '{1}'", plan.Id, stringToContainToBeKept);
+                                    swLogFile.WriteLine("         refused: plan ID ({0}) does not contain '{1}'", plan.Id, stringToContainToBeKept);
 
+                                }
                             }
-                        }
 
-                        if (excludeIfPlannedNameContainAString)
-                        {
-                            if (plan.Id.Contains(stringToContainToBeExcluded))
+                            if (excludeIfPlannedNameContainAString)
                             {
-                                keepThisPlan = keepThisPlan * 0;
-                                Console.WriteLine("         refused: plan ID ({0}) does contain '{1}'", plan.Id, stringToContainToBeExcluded);
-                                swLogFile.WriteLine("         refused: plan ID ({0}) does  contain '{1}'", plan.Id, stringToContainToBeExcluded);
+                                if (plan.Id.Contains(stringToContainToBeExcluded))
+                                {
+                                    keepThisPlan = keepThisPlan * 0;
+                                    Console.WriteLine("         refused: plan ID ({0}) does contain '{1}'", plan.Id, stringToContainToBeExcluded);
+                                    swLogFile.WriteLine("         refused: plan ID ({0}) does  contain '{1}'", plan.Id, stringToContainToBeExcluded);
 
+                                }
+                                else
+                                    keepThisPlan = keepThisPlan * 1;
                             }
-                            else
-                                keepThisPlan = keepThisPlan * 1;
-                        }
-                       
-                        #endregion
 
+                            #endregion
+                        }
+                        #endregion
+                        #region VERBOSE
+                        if (verbose > 5)
+                        {
+                            Console.WriteLine("Plan tested"); // verbose
+                            Console.ReadLine();
+                        }
                         #endregion
 
                         #region GET THE DATA 
@@ -556,8 +651,8 @@ namespace VMS.TPS
                             }
 
                             // write first 3 columns
-                           // swData.Write("{0},{1},{2}", p.Id, plan.CreationDateTime, plan.CreationUserName);
-                            swData.Write("{0};{1};{2};{3}", p.Id, plan.Id,plan.CreationDateTime, plan.CreationUserName);
+                            // swData.Write("{0},{1},{2}", p.Id, plan.CreationDateTime, plan.CreationUserName);
+                            swData.Write("{0};{1};{2};{3}", p.Id, plan.Id, plan.CreationDateTime, plan.CreationUserName);
 
                             StructureSet ss = plan.StructureSet;
                             bool foundOneStruct = false;
@@ -566,7 +661,7 @@ namespace VMS.TPS
                                 // get separated elements of a line (separator is a ,)
                                 lineElements = myString.Split(',');
                                 // get the different possible names of the structure (separate by a ;)
-                                string[] myFirstName = lineElements[0].Split(';');  
+                                string[] myFirstName = lineElements[0].Split(';');
                                 foundOneStruct = false;
                                 foreach (string myDiffStrucNames in myFirstName) // loop on the different names of a same struct
                                 {
@@ -585,22 +680,22 @@ namespace VMS.TPS
                                                     Console.WriteLine(" {0} found", myDiffStrucNames);
                                                 foreach (string dataToGet in lineElements.Skip(1)) // loop on index
                                                 {
-                                                    if (verbose > 5) 
+                                                    if (verbose > 5)
                                                         Console.WriteLine(" Gimme the {0} for {1}\r\n", dataToGet, struct1.Id);
 
                                                     double thisValueImLookingFor = -99.999;
-                     
-                                                    thisValueImLookingFor = gimmeThatBro(dataToGet, struct1, plan,dvh);
-                                                    
+
+                                                    thisValueImLookingFor = gimmeThatBro(dataToGet, struct1, plan, dvh);
+
                                                     swLogFile.WriteLine("  {0} for {1} is {2:0.00}", dataToGet, struct1.Id, thisValueImLookingFor);
                                                     swData.Write(";{0:0.00}", thisValueImLookingFor);
                                                     //swData.Write(",{0:0.00}", thisValueImLookingFor);
                                                 }
                                             }
                                         }
-                                    }                                                                      
+                                    }
                                 }
-                                
+
                                 if (foundOneStruct == false)
                                 {
                                     Console.WriteLine(" Cannot find the structure {0} with this name or other names", myFirstName[0]);
@@ -608,14 +703,22 @@ namespace VMS.TPS
                                     foreach (string skippedData in lineElements.Skip(1))
                                         swData.Write(";");
                                     //swData.Write(",");
-                                }                              
+                                }
                             }
                             swData.Write("\r\n");
                         }
                         //swData.Write("\r\n");
                         #endregion
+                        #region VERBOSE
+                        if (verbose > 5)
+                        {
+                            Console.WriteLine("Data hunted"); // verbose
+                            Console.ReadLine();
+                        }
+                        #endregion
 
-                    } //end of plan loop
+
+                        } //end of plan loop
                     #endregion
                 } // end of course loop
                 #endregion
@@ -630,12 +733,15 @@ namespace VMS.TPS
             if (verbose > 0)
             {
                 Console.WriteLine("Number of accepted/total patients: {1}/{0} (accepted : at least one accepted plan)", nPatient, nPatientWithAnAcceptedPlan);
+                Console.WriteLine("Number of excluded IDs {0} (more than once in id.txt)", nDoublons);
                 Console.WriteLine("Number of accepted/total plans: {0}/{1}", numberOfAcceptedPlans, totalNumberOfPlans);
                 Console.WriteLine("Please type Enter\n");
                 Console.ReadLine(); // Ask user to type enter to finish.
+
                 swLogFile.WriteLine("Number of accepted/total patients: {1}/{0} (accepted : at least one accepted plan)", nPatient, nPatientWithAnAcceptedPlan);
+                swLogFile.WriteLine("Number of excluded IDs {0} (more than once in id.txt)", nDoublons);
                 swLogFile.WriteLine("Number of accepted/total plans: {0}/{1}", numberOfAcceptedPlans, totalNumberOfPlans);
-                swLogFile.WriteLine("Please type Enter\n");
+
 
             }
             #endregion
@@ -653,8 +759,8 @@ namespace VMS.TPS
         {
             int verbose = 0;
             double checkThat = -1.0;
-            if (verbose > 5) 
-                Console.WriteLine("--> looking for {0} for {1} in {2}", myDataToGet, myStruct.Id,myPlan.Id);
+            if (verbose > 5)
+                Console.WriteLine("--> looking for {0} for {1} in {2}", myDataToGet, myStruct.Id, myPlan.Id);
             #region MAX DOSE       
             if (myDataToGet == "max" || myDataToGet == "Max" || myDataToGet == "MAX")
             {
@@ -673,7 +779,7 @@ namespace VMS.TPS
             #region MEDIAN DOSE
             if (myDataToGet == "median" || myDataToGet == "Median" || myDataToGet == "MEDIAN")
             {
-                DoseValue myMedianDose = myPlan.GetDoseAtVolume(myStruct, 50, VolumePresentation.Relative, DoseValuePresentation.Absolute);              
+                DoseValue myMedianDose = myPlan.GetDoseAtVolume(myStruct, 50, VolumePresentation.Relative, DoseValuePresentation.Absolute);
                 checkThat = myMedianDose.Dose;
             }
             #endregion
@@ -731,7 +837,7 @@ namespace VMS.TPS
 
                 if (unit.Value == "cc")
                     checkThat = myPlan.GetVolumeAtDose(myStruct, myRequestedDose, VolumePresentation.AbsoluteCm3);
-                else if (unit.Value == "%") 
+                else if (unit.Value == "%")
                     checkThat = myPlan.GetVolumeAtDose(myStruct, myRequestedDose, VolumePresentation.Relative);
                 else
                     checkThat = -1.0;
