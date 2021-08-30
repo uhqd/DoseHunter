@@ -507,11 +507,12 @@ namespace VMS.TPS
                             }
                         }
                         #endregion
+
+
+                        #region TEST IF THE PLAN HAS A NAME
+
                         if (keepThisPlan == 1)
                         {
-                            #region TEST IF THE PLAN HAS A NAME
-
-
                             if (keepNamedPlan == false) // dont keep  plans with a name
                             {
                                 if (plan.Name != "")  // if  name exist
@@ -530,8 +531,10 @@ namespace VMS.TPS
                                     swLogFile.WriteLine("         refused: THE PLAN HAS NO NAME ");
                                 }
                             }
-                            #endregion
-                            #region TEST THE PLAN APPROBATION
+                        }
+                        #endregion
+                        #region TEST THE PLAN APPROBATION
+                        if (keepThisPlan == 1)
                             if (keepTAapprovedPlan == false) // dont keep  Treat approved plans
                             {
                                 if (plan.ApprovalStatus == PlanSetupApprovalStatus.TreatmentApproved)  // if  treat approve
@@ -541,6 +544,7 @@ namespace VMS.TPS
                                     swLogFile.WriteLine("         refused: THE PLAN IS TREAT APPROVED");
                                 }
                             }
+                        if (keepThisPlan == 1)
                             if (keepPAapprovedPlan == false) // dont keep  planning approved plans
                             {
                                 if (plan.ApprovalStatus == PlanSetupApprovalStatus.PlanningApproved)  // if  plan approve
@@ -550,6 +554,7 @@ namespace VMS.TPS
                                     swLogFile.WriteLine("         refused: THE PLAN IS PLAN APPROVED");
                                 }
                             }
+                        if (keepThisPlan == 1)
                             if (keepUnapprovedPlan == false) // dont keep   unapproved plans
                             {
                                 if (plan.ApprovalStatus == PlanSetupApprovalStatus.UnApproved)  // if  plan approve
@@ -559,6 +564,7 @@ namespace VMS.TPS
                                     swLogFile.WriteLine("         refused: THE PLAN IS UNAPPROVED");
                                 }
                             }
+                        if (keepThisPlan == 1)
                             if (keepRefusedPlan == false) // dont keep refused plans
                             {
                                 if (plan.ApprovalStatus == PlanSetupApprovalStatus.Rejected)  // if  plan rejected
@@ -568,6 +574,7 @@ namespace VMS.TPS
                                     swLogFile.WriteLine("         refused: THE PLAN STATUS IS REFUSED");
                                 }
                             }
+                        if (keepThisPlan == 1)
                             if (keepRetiredPlan == false) // dont keep retired plans
                             {
                                 if (plan.ApprovalStatus == PlanSetupApprovalStatus.Retired)  // if  plan retired
@@ -578,44 +585,44 @@ namespace VMS.TPS
                                 }
                             }
 
-                            #endregion
-                            #region TEST IF TOTAL DOSE BETWEEN MIN AND MAX
-                            if (plan.TotalDose.Dose < minTotalDose || plan.TotalDose.Dose > maxTotalDose)
+                        #endregion
+                        #region TEST IF TOTAL DOSE BETWEEN MIN AND MAX
+                        if (plan.TotalDose.Dose < minTotalDose || plan.TotalDose.Dose > maxTotalDose)
+                        {
+                            keepThisPlan = keepThisPlan * 0;
+                            Console.WriteLine("         refused: Total dose ({0:0.00} Gy) is not between {1} and {2} Gy", plan.TotalDose.Dose, minTotalDose, maxTotalDose);
+                            swLogFile.WriteLine("         refused: Total dose ({0:0.00} Gy) is not between {1} and {2} Gy", plan.TotalDose.Dose, minTotalDose, maxTotalDose);
+                        }
+                        #endregion
+                        #region TEST IF PLAN CONTAINS OR DOES NOT CONTAIN A CHOSEN STRING
+                        if (keepIfPlanNameContainAstring)
+                        {
+                            if (plan.Id.Contains(stringToContainToBeKept))
+                                keepThisPlan = keepThisPlan * 1;
+                            else
                             {
                                 keepThisPlan = keepThisPlan * 0;
-                                Console.WriteLine("         refused: Total dose ({0:0.00} Gy) is not between {1} and {2} Gy", plan.TotalDose.Dose, minTotalDose, maxTotalDose);
-                                swLogFile.WriteLine("         refused: Total dose ({0:0.00} Gy) is not between {1} and {2} Gy", plan.TotalDose.Dose, minTotalDose, maxTotalDose);
+                                Console.WriteLine("         refused: plan ID ({0}) does not contain '{1}'", plan.Id, stringToContainToBeKept);
+                                swLogFile.WriteLine("         refused: plan ID ({0}) does not contain '{1}'", plan.Id, stringToContainToBeKept);
+
                             }
-                            #endregion
-                            #region TEST IF PLAN CONTAINS OR DOES NOT CONTAIN A CHOSEN STRING
-                            if (keepIfPlanNameContainAstring)
-                            {
-                                if (plan.Id.Contains(stringToContainToBeKept))
-                                    keepThisPlan = keepThisPlan * 1;
-                                else
-                                {
-                                    keepThisPlan = keepThisPlan * 0;
-                                    Console.WriteLine("         refused: plan ID ({0}) does not contain '{1}'", plan.Id, stringToContainToBeKept);
-                                    swLogFile.WriteLine("         refused: plan ID ({0}) does not contain '{1}'", plan.Id, stringToContainToBeKept);
-
-                                }
-                            }
-
-                            if (excludeIfPlannedNameContainAString)
-                            {
-                                if (plan.Id.Contains(stringToContainToBeExcluded))
-                                {
-                                    keepThisPlan = keepThisPlan * 0;
-                                    Console.WriteLine("         refused: plan ID ({0}) does contain '{1}'", plan.Id, stringToContainToBeExcluded);
-                                    swLogFile.WriteLine("         refused: plan ID ({0}) does  contain '{1}'", plan.Id, stringToContainToBeExcluded);
-
-                                }
-                                else
-                                    keepThisPlan = keepThisPlan * 1;
-                            }
-
-                            #endregion
                         }
+
+                        if (excludeIfPlannedNameContainAString)
+                        {
+                            if (plan.Id.Contains(stringToContainToBeExcluded))
+                            {
+                                keepThisPlan = keepThisPlan * 0;
+                                Console.WriteLine("         refused: plan ID ({0}) does contain '{1}'", plan.Id, stringToContainToBeExcluded);
+                                swLogFile.WriteLine("         refused: plan ID ({0}) does  contain '{1}'", plan.Id, stringToContainToBeExcluded);
+
+                            }
+                            else
+                                keepThisPlan = keepThisPlan * 1;
+                        }
+
+                        #endregion
+
                         #endregion
                         #region VERBOSE
                         if (verbose > 5)
