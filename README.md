@@ -11,7 +11,7 @@ DoseHunter is a stand-alone executable for Varian Eclipse V15.x. DoseHunter auto
 
 ## Authors
 
-**Luc Simon<sup>1,2</sup>,François-Xavier Arnaud<sup>2</sup> **
+**Luc Simon<sup>1,2</sup>,François-Xavier Arnaud<sup>2</sup>**
 
 (1)[CRCT](https://www.crct-inserm.fr/), Toulouse, France
 
