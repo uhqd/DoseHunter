@@ -30,7 +30,8 @@ Named plan:yes
 Unnamed plan:yes
 
 # keep it if it contains a string? If "yes", plans will be kept only if they contain the string 
-Plan name must contain a string:yes:ro
+Plan name must contain a string:yes:ff:RA:tutu
 
 # Exclude it if it contains a string? If "yes", plans will refused if they contain the string 
-Exclude if plan name contains:no:toto
+Exclude if plan name contains:yes:toto:LOGE:tutu
+
