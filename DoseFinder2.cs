@@ -131,12 +131,14 @@ namespace VMS.TPS
                 Console.ReadLine();
                 return;
             }
-
+            int nPatientsInList=0;
             StreamReader sr = new StreamReader(idfilename);
             line = sr.ReadLine(); // read first line
             if ((line != null) && (line.Length > 2)) // an ID Must be > 2 characters
+            {
+                nPatientsInList++;
                 list_patient.Add(line);
-
+            }
             while (line != null)
             {
                 line = sr.ReadLine();
@@ -150,7 +152,10 @@ namespace VMS.TPS
                 #endregion
                 if ((line != null) && (line.Length > 2)) // an ID Must be > 2 characters
                     if (isADoublon == false)
+                    {
+                        nPatientsInList++;
                         list_patient.Add(line);
+                    }
                     else
                     {
                         nDoublons++;
@@ -158,6 +163,8 @@ namespace VMS.TPS
                         //Console.WriteLine(" {0} is a doublon\n", line);
                     }
             }
+
+
             sr.Close();
 
             if (verbose > 5)
@@ -469,8 +476,8 @@ namespace VMS.TPS
 
                 if (verbose > 0)
                 {
-                    Console.WriteLine("{1} {0}", p.Name, nPatient); // verbose
-                    swLogFile.WriteLine("{1} {0}\n\n\n", p.Name, nPatient);
+                    Console.WriteLine("{1}/{2} {0}", p.Name, nPatient, nPatientsInList); // verbose
+                    swLogFile.WriteLine("{1}/{2} {0}\n\n\n", p.Name, nPatient, nPatientsInList);
                     if (verbose > 5)
                         Console.ReadLine();
                 }
@@ -690,6 +697,7 @@ namespace VMS.TPS
                                 lineElements = myString.Split(',');
                                 // get the different possible names of the structure (separate by a ;)
                                 string[] myFirstName = lineElements[0].Split(';');
+
                                 foundOneStruct = false;
                                 foreach (string myDiffStrucNames in myFirstName) // loop on the different names of a same struct
                                 {
