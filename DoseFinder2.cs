@@ -92,6 +92,8 @@ namespace VMS.TPS
             String line;
             string[] lineElements;
             string[] filterTags;
+            string[] stringToContainToBeKept = null;
+            string[] stringToContainToBeExcluded = null;
             bool isADoublon = false;
             int verbose;
             //verbose = 9;
@@ -111,9 +113,9 @@ namespace VMS.TPS
             Structure struct1;
             double minTotalDose, maxTotalDose;
             bool keepUnapprovedPlan, keepPAapprovedPlan, keepTAapprovedPlan;
-            bool keepNamedPlan, keepUnamedPlan,keepRefusedPlan,keepRetiredPlan;
+            bool keepNamedPlan, keepUnamedPlan, keepRefusedPlan, keepRetiredPlan;
             bool keepIfPlanNameContainAstring, excludeIfPlannedNameContainAString;
-            string stringToContainToBeKept, stringToContainToBeExcluded;
+
             #endregion
 
             #region READ THE ID FILE
@@ -186,8 +188,7 @@ namespace VMS.TPS
             keepUnapprovedPlan = true;
             keepIfPlanNameContainAstring = false;
             excludeIfPlannedNameContainAString = false;
-            stringToContainToBeKept = "toto";
-            stringToContainToBeExcluded = "toto";
+
 
             if (!File.Exists(planfilterfilename))
             {
@@ -283,7 +284,13 @@ namespace VMS.TPS
                             if (filterTags[1] == "yes")
                             {
                                 keepIfPlanNameContainAstring = true;
-                                stringToContainToBeKept = filterTags[2];
+                                stringToContainToBeKept = filterTags;
+
+                                /* 
+                                 * foreach (string myString in stringToContainToBeKept)
+                                      Console.WriteLine(" String is: '{0}'", myString);
+                                */
+                                //stringToContainToBeKept = filterTags[2];
                             }
                             else if (filterTags[1] == "no")
                                 keepIfPlanNameContainAstring = false;
@@ -295,7 +302,7 @@ namespace VMS.TPS
                             if (filterTags[1] == "yes")
                             {
                                 excludeIfPlannedNameContainAString = true;
-                                stringToContainToBeExcluded = filterTags[2];
+                                stringToContainToBeExcluded = filterTags;
                             }
                             else if (filterTags[1] == "no")
                                 excludeIfPlannedNameContainAString = false;
@@ -319,11 +326,18 @@ namespace VMS.TPS
             Console.WriteLine("Keep named plans?\t{0}", keepNamedPlan);
             Console.WriteLine("Keep unamed plans?\t{0}", keepUnamedPlan);
             Console.WriteLine("Keep plans containing a particular string?\t{0}", keepIfPlanNameContainAstring);
+
             if (keepIfPlanNameContainAstring)
-                Console.WriteLine(" String is: '{0}'", stringToContainToBeKept);
+                for (int i = 2; i < stringToContainToBeKept.Length; i++)
+                {
+                    Console.WriteLine(" keep the plan if planID contains: '{0}'", stringToContainToBeKept[i]);
+                }
             Console.WriteLine("Exclude plans containing a particular string?\t{0}", excludeIfPlannedNameContainAString);
             if (excludeIfPlannedNameContainAString)
-                Console.WriteLine(" String is: '{0}'", stringToContainToBeExcluded);
+                for (int i = 2; i < stringToContainToBeExcluded.Length; i++)
+                {
+                    Console.WriteLine(" exclude the plan if planID contains: '{0}'", stringToContainToBeExcluded[i]);
+                }
             Console.WriteLine("\r\n\r\n\r\n");
             #endregion
 
@@ -539,6 +553,7 @@ namespace VMS.TPS
                             {
                                 if (plan.ApprovalStatus == PlanSetupApprovalStatus.TreatmentApproved)  // if  treat approve
                                 {
+
                                     keepThisPlan = keepThisPlan * 0;
                                     Console.WriteLine("         refused: THE PLAN IS TREAT APPROVED");
                                     swLogFile.WriteLine("         refused: THE PLAN IS TREAT APPROVED");
@@ -587,39 +602,45 @@ namespace VMS.TPS
 
                         #endregion
                         #region TEST IF TOTAL DOSE BETWEEN MIN AND MAX
-                        if (plan.TotalDose.Dose < minTotalDose || plan.TotalDose.Dose > maxTotalDose)
-                        {
-                            keepThisPlan = keepThisPlan * 0;
-                            Console.WriteLine("         refused: Total dose ({0:0.00} Gy) is not between {1} and {2} Gy", plan.TotalDose.Dose, minTotalDose, maxTotalDose);
-                            swLogFile.WriteLine("         refused: Total dose ({0:0.00} Gy) is not between {1} and {2} Gy", plan.TotalDose.Dose, minTotalDose, maxTotalDose);
-                        }
+                        if (keepThisPlan == 1)
+                            if (plan.TotalDose.Dose < minTotalDose || plan.TotalDose.Dose > maxTotalDose)
+                            {
+                                keepThisPlan = keepThisPlan * 0;
+                                Console.WriteLine("         refused: Total dose ({0:0.00} Gy) is not between {1} and {2} Gy", plan.TotalDose.Dose, minTotalDose, maxTotalDose);
+                                swLogFile.WriteLine("         refused: Total dose ({0:0.00} Gy) is not between {1} and {2} Gy", plan.TotalDose.Dose, minTotalDose, maxTotalDose);
+                            }
                         #endregion
-                        #region TEST IF PLAN CONTAINS OR DOES NOT CONTAIN A CHOSEN STRING
-                        if (keepIfPlanNameContainAstring)
-                        {
-                            if (plan.Id.Contains(stringToContainToBeKept))
-                                keepThisPlan = keepThisPlan * 1;
-                            else
+
+                        #region TEST IF PLAN CONTAINS OR DOES NOT CONTAIN SOME CHOSEN STRINGS
+                        if (keepThisPlan == 1) // TEST ALL STINGS TO KEEP PLANS
+                            if (keepIfPlanNameContainAstring)
                             {
-                                keepThisPlan = keepThisPlan * 0;
-                                Console.WriteLine("         refused: plan ID ({0}) does not contain '{1}'", plan.Id, stringToContainToBeKept);
-                                swLogFile.WriteLine("         refused: plan ID ({0}) does not contain '{1}'", plan.Id, stringToContainToBeKept);
-
+                                keepThisPlan = 0;
+                                for (int i = 2; i < stringToContainToBeKept.Length; i++)
+                                {
+                                    if (plan.Id.Contains(stringToContainToBeKept[i]))
+                                        keepThisPlan = 1;
+                                }
+                                if (keepThisPlan == 0)
+                                {
+                                    Console.WriteLine("         refused: plan ID ({0}) does not contain one of the required strings", plan.Id);
+                                    swLogFile.WriteLine("         refused: plan ID ({0}) does not contain one of the required strings", plan.Id);
+                                }
                             }
-                        }
 
-                        if (excludeIfPlannedNameContainAString)
-                        {
-                            if (plan.Id.Contains(stringToContainToBeExcluded))
+                        if (keepThisPlan == 1)  // TEST ALL STINGS TO EXCLUDE PLANS
+                            if (excludeIfPlannedNameContainAString)
                             {
-                                keepThisPlan = keepThisPlan * 0;
-                                Console.WriteLine("         refused: plan ID ({0}) does contain '{1}'", plan.Id, stringToContainToBeExcluded);
-                                swLogFile.WriteLine("         refused: plan ID ({0}) does  contain '{1}'", plan.Id, stringToContainToBeExcluded);
-
+                                for (int i = 2; i < stringToContainToBeExcluded.Length; i++)
+                                {
+                                    if (plan.Id.Contains(stringToContainToBeExcluded[i]))
+                                    {
+                                        keepThisPlan = keepThisPlan * 0;
+                                        Console.WriteLine("         refused: plan ID ({0}) does contain the strings {1}", plan.Id, stringToContainToBeExcluded[i]);
+                                        swLogFile.WriteLine("         refused: plan ID ({0}) does contain the strings {1}", plan.Id, stringToContainToBeExcluded[i]);
+                                    }
+                                }
                             }
-                            else
-                                keepThisPlan = keepThisPlan * 1;
-                        }
 
                         #endregion
 
@@ -725,7 +746,7 @@ namespace VMS.TPS
                         #endregion
 
 
-                        } //end of plan loop
+                    } //end of plan loop
                     #endregion
                 } // end of course loop
                 #endregion
@@ -833,7 +854,7 @@ namespace VMS.TPS
             #endregion
             #region V__Gy
             string v_at_d_pattern = @"^V(?<evalpt>\d+\p{P}\d+|\d+)(?<unit>(%|cc))$"; // matches V50.4cc or V50.4% 
-            //var
+                                                                                     //var
             testMatch = Regex.Matches(myDataToGet, v_at_d_pattern);
             if (testMatch.Count != 0) // count is 1
             {
