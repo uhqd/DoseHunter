@@ -131,7 +131,7 @@ namespace VMS.TPS
                 Console.ReadLine();
                 return;
             }
-            int nPatientsInList=0;
+            int nPatientsInList = 0;
             StreamReader sr = new StreamReader(idfilename);
             line = sr.ReadLine(); // read first line
             if ((line != null) && (line.Length > 2)) // an ID Must be > 2 characters
@@ -499,8 +499,8 @@ namespace VMS.TPS
                         keepThisPlan = 1;
                         totalNumberOfPlans++;
                         numberOfPlansForThisPatient++;
-                        Console.WriteLine("Plan: {0} ", plan.Id); // Verbose      
-                        swLogFile.WriteLine("Plan: {0} ", plan.Id); // Verbose      
+                        Console.WriteLine("  Plan: {0} (course: {1})", plan.Id,course.Id); // Verbose      
+                        swLogFile.WriteLine("  Plan: {0}  (course: {1})", plan.Id, course.Id); // Verbose      
 
 
                         #region TEST THE PLAN
@@ -711,9 +711,9 @@ namespace VMS.TPS
                                                 foundOneStruct = true;
                                                 DVHData dvh = plan.GetDVHCumulativeData(struct1, DoseValuePresentation.Absolute, VolumePresentation.Relative, 0.1);
 
-                                                swLogFile.WriteLine("{0} found", myDiffStrucNames); // verbose
+                                                swLogFile.WriteLine("    {0} found", myDiffStrucNames); // verbose
                                                 if (verbose > 0)
-                                                    Console.WriteLine(" {0} found", myDiffStrucNames);
+                                                    Console.WriteLine("    {0} found", myDiffStrucNames);
                                                 foreach (string dataToGet in lineElements.Skip(1)) // loop on index
                                                 {
                                                     if (verbose > 5)
@@ -723,8 +723,15 @@ namespace VMS.TPS
 
                                                     thisValueImLookingFor = gimmeThatBro(dataToGet, struct1, plan, dvh);
 
-                                                    swLogFile.WriteLine("  {0} for {1} is {2:0.00}", dataToGet, struct1.Id, thisValueImLookingFor);
-                                                    swData.Write(";{0:0.00}", thisValueImLookingFor);
+                                                    if (thisValueImLookingFor != -1.0)
+                                                    {
+                                                        swLogFile.WriteLine("  {0} for {1} is {2:0.00}", dataToGet, struct1.Id, thisValueImLookingFor);
+                                                        swData.Write(";{0:0.00}", thisValueImLookingFor);
+                                                    }
+                                                    else
+                                                    {
+                                                        swData.Write(";"); // if data impossible to extract
+                                                    }
                                                     //swData.Write(",{0:0.00}", thisValueImLookingFor);
                                                 }
                                             }
@@ -734,8 +741,8 @@ namespace VMS.TPS
 
                                 if (foundOneStruct == false)
                                 {
-                                    Console.WriteLine(" Cannot find the structure {0} with this name or other names", myFirstName[0]);
-                                    swLogFile.WriteLine(" Cannot find the structure {0} with this name or other names", myFirstName[0]);
+                                    Console.WriteLine("    {0} not found ********", myFirstName[0]);
+                                    swLogFile.WriteLine("    {0} not found ********", myFirstName[0]);
                                     foreach (string skippedData in lineElements.Skip(1))
                                         swData.Write(";");
                                     //swData.Write(",");
@@ -879,6 +886,8 @@ namespace VMS.TPS
                     checkThat = -1.0;
             }
             #endregion
+            if (Double.IsNaN(checkThat))
+                checkThat = -1.0;
             if (checkThat == -1.0)
                 Console.WriteLine("Impossible to obtain {0} for {1} in {2} ", myDataToGet, myStruct.Id, myPlan.Id);
             return (checkThat);
