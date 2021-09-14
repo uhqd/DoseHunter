@@ -452,7 +452,7 @@ namespace VMS.TPS
                 lineElements = myString.Split(',');  // separate elements in a line by a ,
                 string[] myFirstName = lineElements[0].Split(';'); // separate the element (different struct names separate by a ;) 
                 foreach (string myOthereMetrics in lineElements.Skip(1)) // Create a cell name: <struct name> (<dose index>)
-                    swData.Write(";{0} ({1})", myFirstName[0], myOthereMetrics);
+                    swData.Write(";{0}({1})", myFirstName[0], myOthereMetrics);
                 //swData.Write(",{0} ({1})", myFirstName[0], myOthereMetrics);
             }
             swData.Write("\r\n"); // add a final line break
