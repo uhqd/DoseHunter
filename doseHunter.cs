@@ -436,7 +436,7 @@ namespace VMS.TPS
             }
             #endregion
 
-            #region CREATE THE OUTPUT FILES         
+            #region CREATE THE OUTPUT FILES    
             // create log file
             StreamWriter swLogFile = new StreamWriter("out/log.txt");
             swLogFile.WriteLine("Output log\r\n\r\n\r\n");
