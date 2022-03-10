@@ -34,3 +34,6 @@ Plan name must contain a string:yes:ff:RA:tutu
 
 # Exclude it if it contains a string? If "yes", plans will refused if they contain the string 
 Exclude if plan name contains:yes:toto:LOGE:tutu
+
+# Explore Sum plans ?  if no, sum plans are ignored, yes to explore them
+Explore Sumplans:yes
