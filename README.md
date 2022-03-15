@@ -9,6 +9,12 @@ DoseHunter is a stand-alone executable for Varian Eclipse V15.x. DoseHunter auto
 
  Please read the [user guide](https://github.com/uhqd/DoseHunter/blob/master/git%20extra%20files/Dose_Hunter_User_Guide.pdf).
 
+# To cite Dose Hunter
+If you like and use Dose Hunter, do not hesitate to tell us. Moreover please add in the "aknowledgelement" section of your articles or your slides:
+
+**This work was done using Dose Hunter, a free and open-source tool to extract data from Varian Aria (github.com/uhqd)**
+
+
 ## Authors
 
 **Luc Simon<sup>1,2</sup>,François-Xavier Arnaud<sup>2</sup>**
