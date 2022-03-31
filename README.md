@@ -17,7 +17,7 @@ If you like and use Dose Hunter, do not hesitate to tell us. Moreover please add
 
 ## Authors
 
-**Luc Simon<sup>1,2</sup>,François-Xavier Arnaud<sup>2</sup>, Bradley Beeksma<sup>3</sup>**
+**Luc Simon<sup>1,2</sup>,François-Xavier Arnaud<sup>2</sup>, [Bradley Beeksma](https://github.com/BradBeeksma)<sup>3</sup>**
 
 (1)[CRCT](https://www.crct-inserm.fr/), Toulouse, France
 
