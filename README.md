@@ -17,11 +17,14 @@ If you like and use Dose Hunter, do not hesitate to tell us. Moreover please add
 
 ## Authors
 
-**Luc Simon<sup>1,2</sup>,François-Xavier Arnaud<sup>2</sup>**
+**Luc Simon<sup>1,2</sup>,François-Xavier Arnaud<sup>2</sup>, Bradley Beeksma<sup>3</sup>**
 
 (1)[CRCT](https://www.crct-inserm.fr/), Toulouse, France
 
 (2)[IUCT-Oncopole](https://www.iuct-oncopole.fr/), Toulouse, France
+
+(3)[Calvary Mater Newcastle](https://www.calvarycare.org.au/public-hospital-mater-newcastle/), New Castle, Australia
+
 
 
 
