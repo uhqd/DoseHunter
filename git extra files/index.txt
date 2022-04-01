@@ -1,11 +1,2 @@
-PTV 6ph,vol,min,max,D95%,mean,median
-PTV 3ph,vol,min,max,D95%,mean,median
-Canal+5,V22.5cc,V14.5cc,D0.1cc
-Oesophage,vol,mean,D0.5cc
-plexus brachial;Plexus Brachial;Plexus brachial,D0.1cc,D3cc
-Coeur;coeur,D0.5cc,V32cc
-PBT,D0.5cc,V18cc
-Trachee,D0.5cc,V18cc
-ParoiThoracique,V32cc,V60cc
-Estomac,D0.5cc,V25cc,V12cc
-Poumons-ITV,vol,mean,V20%
+Cerveau,vol,mean,V20%
+PTV_LitOp1.1,vol,HI,PI

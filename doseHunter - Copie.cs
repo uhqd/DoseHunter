@@ -1075,18 +1075,12 @@ namespace VMS.TPS
             if (myDataToGet.Substring(0, 2) == "PI" || myDataToGet.Substring(0, 2) == "pi" || myDataToGet.Substring(0, 2) == "pI" || myDataToGet.Substring(0, 2) == "Pi")
             {
                 //Conformation number requres both body and PTV as input structures. 
-
-                
                 double TV = myStruct.Volume;
-                
                 double isodoseLvl = Convert.ToDouble(myDataToGet.Remove(0, 2)) / 100;
                 Structure Body = myPlan.StructureSet.Structures.Where(x => x.DicomType == "EXTERNAL").Single();
-               
                 double PIV = myPlan.GetVolumeAtDose(Body, myPlan.TotalDose * isodoseLvl, VolumePresentation.AbsoluteCm3);
                 double TV_PIV = myPlan.GetVolumeAtDose(myStruct, myPlan.TotalDose * isodoseLvl, VolumePresentation.AbsoluteCm3);
-                Console.WriteLine("ttt {0} {1} {2}  ", TV_PIV, TV, PIV);
                 checkThat = Math.Round((TV_PIV * TV_PIV) / (TV * PIV), 3);
-                
             }
             #endregion
             if (Double.IsNaN(checkThat))
