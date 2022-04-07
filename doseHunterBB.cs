@@ -1,7 +1,36 @@
 /*
 User input :
 The user must provide 3 files (file names MUST be id.txt and index.txt)
-See documentation 
+1.
+id.txt file that contains only one column with patient IDs
+2. 
+index.txt contain the chosen indexes that the user wants to collect
+Each structure on a line with a "," to separate the fields
+First field is the structure name
+if the struct can have several version of structure name, separate them with a ;
+If several versions of a structure name are provided AND several structures really
+exists with these names, only the first is taken in account
+
+Other fields can be different indexes. Candidates are:
+vol --> volume of the structure (Vol and VOL are tolerated)
+min --> minimum dose of the structure (Gy) (Min and MIN are tolerated)
+max --> max dose of the structure (Gy) (Max and MAX are tolerated)
+mean --> mean dose of the structure (Gy) (Mean and MEAN are tolerated)
+median --> median dose of the structure (Gy) (Median and MEDIAN are tolerated)
+DXX% or DXXcc --> e.g. D95% or D2.5cc : Dose (Gy) recieved by 95% or 2.55 cc of the structure
+VXX% or VXXcc --> e.g V49.6% or V49.6cc : Volume in % or cc that recieved 49.6 Gy
+
+No relative doses are allowed. 
+
+In the following exemple the user wants to collect :
+The max dose and the Dose (Gy) recieved by 95% of the volume for structure "Coeur"
+The max dose for structure "Canal med"
+The max dose for structure that can be name "ptvCMI" OR "ptv cmi"  
+
+----
+Coeur,max,D95%
+Canal med,max
+ptvCMI;ptv cmi,max 
 
 Output: (in out/ dir.)
 log.txt: main information about the execution
@@ -39,7 +68,6 @@ namespace VMS.TPS
             catch (Exception e)
             {
                 Console.Error.WriteLine(e.ToString());
-                Console.ReadLine();
             }
         }
         #endregion
@@ -70,7 +98,7 @@ namespace VMS.TPS
             int verbose;
             //verbose = 9;
             verbose = 1;
-            DateTime lastTime = DateTime.Now;
+
             int nPatient = 0;  // total number of patient. Must be the number of lines in ip.txt
             int nDoublons = 0;
             int nPatientWithAnAcceptedPlan = 0; // number of patient with at least an accepted plan
@@ -188,11 +216,11 @@ namespace VMS.TPS
                     if (line != null)
                     {
                         filterTags = line.Split(':');
-                        if (filterTags[0] == "Min Total Dose (Gy)")
+                        if (filterTags[0] == "Min Total Dose (cGy)")
                         {
                             minTotalDose = Convert.ToDouble(filterTags[1]);
                         }
-                        if (filterTags[0] == "Max Total Dose (Gy)")
+                        if (filterTags[0] == "Max Total Dose (cGy)")
                         {
                             maxTotalDose = Convert.ToDouble(filterTags[1]);
                         }
@@ -265,6 +293,12 @@ namespace VMS.TPS
                             {
                                 keepIfPlanNameContainAstring = true;
                                 stringToContainToBeKept = filterTags;
+
+                                /* 
+                                 * foreach (string myString in stringToContainToBeKept)
+                                      Console.WriteLine(" String is: '{0}'", myString);
+                                */
+                                //stringToContainToBeKept = filterTags[2];
                             }
                             else if (filterTags[1] == "no")
                                 keepIfPlanNameContainAstring = false;
@@ -426,7 +460,7 @@ namespace VMS.TPS
             #region WRITE CSV HEAD
             //swData.Write("ID,date,user");  // first 3 fields separated by a coma
             //swData.Write("patientID;planID;date;user");  // first 3 fields separated by a ;
-            swData.Write("patientID;courseID;planID;date;user;TotalDose;Dose/#;Fractions;MU;MI;Normalisation");// first 11 fields separated by a ;
+            swData.Write("patientID;courseID;planID;TotalDose;Dose/#;Fractions;MU;MI;Normalisation");
             foreach (string myString in list_struct) // loop on the lines
             {
                 lineElements = myString.Split(',');  // separate elements in a line by a ,
@@ -664,6 +698,7 @@ namespace VMS.TPS
                                 Console.WriteLine("   Total dose =  {0}  ", plan.TotalDose); // verbose
                                 swLogFile.WriteLine("   Total dose =  {0}  ", plan.TotalDose); // verbose
                             }
+
                             //Total MU
                             double MU = 0;
                             foreach (Beam beam in plan.Beams)
@@ -671,13 +706,15 @@ namespace VMS.TPS
                                 if (!beam.IsSetupField)
                                     MU = MU + Math.Round(beam.Meterset.Value, 2);
                             }
+
                             //MI
                             var MI = Math.Round(MU / (plan.DosePerFraction.Dose), 3);
 
-                            // write first 11 columns
-                            swData.Write("{0};{1};{2};{3};{4};{5};{6};{7};{8};{9};{10}",
-                                p.Id, course.Id, plan.Id, plan.CreationDateTime, plan.CreationUserName, plan.TotalDose.ValueAsString, plan.DosePerFraction.ValueAsString,
-                                plan.NumberOfFractions, MU, MI, Math.Round(plan.PlanNormalizationValue, 1));
+                            // write first 3 columns
+                            // swData.Write("{0},{1},{2}", p.Id, plan.CreationDateTime, plan.CreationUserName);
+                            // swData.Write("{0};{1};{2};{3}", p.Id, plan.Id, plan.CreationDateTime, plan.CreationUserName);
+                            swData.Write("{0};{1};{2};{3};{4};{5};{6};{7};{8}", p.Id, course.Id, plan.Id, plan.TotalDose.ValueAsString, plan.DosePerFraction.ValueAsString, plan.NumberOfFractions, MU, MI, Math.Round(plan.PlanNormalizationValue,1));
+
 
                             StructureSet ss = plan.StructureSet;
                             bool foundOneStruct = false;
@@ -763,14 +800,14 @@ namespace VMS.TPS
                                 Console.WriteLine("Inspect Course: {0} Plan: {1}", course.Id, plan.Id); // verbose
                                 Console.ReadLine();
                             }
-                            Console.WriteLine("  Plan: {0} (course: {1})", plan.Id, course.Id); // Verbose      
-                            swLogFile.WriteLine("  Plan: {0}  (course: {1})", plan.Id, course.Id); // Verbose      
-
                             #endregion
 
                             keepThisPlan = 1;
                             totalNumberOfPlans++;
                             numberOfPlansForThisPatient++;
+                            Console.WriteLine("  Plan: {0} (course: {1})", plan.Id, course.Id); // Verbose      
+                            swLogFile.WriteLine("  Plan: {0}  (course: {1})", plan.Id, course.Id); // Verbose      
+
 
                             #region TEST THE PLAN
 
@@ -798,7 +835,7 @@ namespace VMS.TPS
                                 }
                             }
                             #endregion
-
+ 
                             #region TEST IF PLAN CONTAINS OR DOES NOT CONTAIN SOME CHOSEN STRINGS
                             if (keepThisPlan == 1) // TEST ALL STINGS TO KEEP PLANS
                                 if (keepIfPlanNameContainAstring)
@@ -860,45 +897,20 @@ namespace VMS.TPS
 
                                 }
 
-                                #region GET GENERAL VALUES FOR THE PLAN SUM: MU, MI, TOTAL DOSE
-                                double MU = 0;
-                                int nTotalFractionOfSum = 0;
-                                double totalDoseOfSum = 0;
-                                double dosePerFractionOfSum = 0;
-                                
-                                foreach (PlanSetup IndividualPlan in plan.PlanSetups)
-                                {
-                                    foreach (Beam beam in IndividualPlan.Beams)
-                                    {
-                                        if (!beam.IsSetupField)
-                                            MU = MU + Math.Round(beam.Meterset.Value, 2);
-                                    }
-                                    nTotalFractionOfSum = nTotalFractionOfSum + IndividualPlan.NumberOfFractions.Value;
-                                    totalDoseOfSum = totalDoseOfSum + IndividualPlan.TotalDose.Dose;
-                                    lastTime = Convert.ToDateTime(IndividualPlan.CreationDateTime);
-                                }
-                                
-                                dosePerFractionOfSum = totalDoseOfSum / nTotalFractionOfSum;
-                                var MI = Math.Round(MU / dosePerFractionOfSum, 3);
-                                #endregion
-
-                                #region Write first 11 columns
-                                double cent = 100.00; //normalisation for plan sum is set to 100.00. Don't ask why
-                                swData.Write("{0};{1};{2};{3};{4};{5:0.000};{6:0.000};{7};{8};{9};{10:0.0}",
-                                    p.Id, course.Id, plan.Id, lastTime, "plan_sum", totalDoseOfSum, dosePerFractionOfSum,
-                                    nTotalFractionOfSum, MU, MI, cent);
-                                #endregion
+  
+                                // write first 3 columns
+                                // swData.Write("{0},{1},{2}", p.Id, plan.CreationDateTime, plan.CreationUserName);
+                                swData.Write("{0};{1};{2};{3}", p.Id, plan.Id, plan.CreationDateTime, plan.CreationDateTime);
 
                                 StructureSet ss = plan.StructureSet;
                                 bool foundOneStruct = false;
-                                #region LOOP ON LINES OF THE FILE index.txt
                                 foreach (string myString in list_struct) // loop on lines of user dose index (1 by struct)
                                 {
                                     // get separated elements of a line (separator is a ,)
                                     lineElements = myString.Split(',');
                                     // get the different possible names of the structure (separate by a ;)
                                     string[] myFirstName = lineElements[0].Split(';');
-                                    #region LOOP ON STRUCTURES
+
                                     foundOneStruct = false;
                                     foreach (string myDiffStrucNames in myFirstName) // loop on the different names of a same struct
                                     {
@@ -915,7 +927,6 @@ namespace VMS.TPS
                                                     swLogFile.WriteLine("    {0} found", myDiffStrucNames); // verbose
                                                     if (verbose > 0)
                                                         Console.WriteLine("    {0} found", myDiffStrucNames);
-                                                    #region LOOP ON INDEX
                                                     foreach (string dataToGet in lineElements.Skip(1)) // loop on index
                                                     {
                                                         if (verbose > 5)
@@ -934,15 +945,12 @@ namespace VMS.TPS
                                                         {
                                                             swData.Write(";"); // if data impossible to extract
                                                         }
-                                                        
+                                                        //swData.Write(",{0:0.00}", thisValueImLookingFor);
                                                     }
-                                                    #endregion
                                                 }
                                             }
                                         }
                                     }
-                                    #endregion
-
 
                                     if (foundOneStruct == false)
                                     {
@@ -954,7 +962,6 @@ namespace VMS.TPS
                                     }
                                 }
                                 swData.Write("\r\n");
-                                #endregion
                             }
                             //swData.Write("\r\n");
                             #endregion
@@ -1046,6 +1053,37 @@ namespace VMS.TPS
                 checkThat = myStruct.Volume;
             }
             #endregion
+             #region HomogenityIndex
+            if (myDataToGet == "HI" || myDataToGet == "hi" || myDataToGet == "Hi" || myDataToGet == "hI")
+            {
+                double d02 = Convert.ToDouble(myPlan.GetDoseAtVolume(myStruct, 2,  VolumePresentation.Relative, DoseValuePresentation.Relative).ValueAsString);
+                double d98 = Convert.ToDouble(myPlan.GetDoseAtVolume(myStruct, 98, VolumePresentation.Relative, DoseValuePresentation.Relative).ValueAsString);
+                double d50 = Convert.ToDouble(myPlan.GetDoseAtVolume(myStruct, 50, VolumePresentation.Relative, DoseValuePresentation.Relative).ValueAsString);
+                checkThat = Math.Round((d02 - d98) / d50, 5);
+            }
+            #endregion
+            #region ConformityIndex
+            if (myDataToGet.Substring(0,2) == "CI" || myDataToGet.Substring(0, 2) == "ci" || myDataToGet.Substring(0, 2) == "cI" || myDataToGet.Substring(0, 2) == "Ci")
+            {
+                //Conformity Index requres Body as input structure for dose calc and volume of target 
+                double isodoseLvl = Convert.ToDouble(myDataToGet.Remove(0,2))/100;
+                Structure Body = myPlan.StructureSet.Structures.Where(x => x.DicomType == "EXTERNAL").Single();
+                double volIsodoseLvl = myPlan.GetVolumeAtDose(Body, myPlan.TotalDose * isodoseLvl, VolumePresentation.AbsoluteCm3);
+                checkThat = Math.Round(volIsodoseLvl / myStruct.Volume, 3);
+            }
+            #endregion
+            #region PaddickConformityIndex
+            if (myDataToGet.Substring(0, 2) == "PI" || myDataToGet.Substring(0, 2) == "pi" || myDataToGet.Substring(0, 2) == "pI" || myDataToGet.Substring(0, 2) == "Pi")
+            {
+                //Conformation number requres both body and PTV as input structures. 
+                double TV = myStruct.Volume;
+                double isodoseLvl = Convert.ToDouble(myDataToGet.Remove(0, 2)) / 100;
+                Structure Body = myPlan.StructureSet.Structures.Where(x => x.DicomType == "EXTERNAL").Single();
+                double PIV = myPlan.GetVolumeAtDose(Body, myPlan.TotalDose * isodoseLvl, VolumePresentation.AbsoluteCm3);
+                double TV_PIV = myPlan.GetVolumeAtDose(myStruct, myPlan.TotalDose * isodoseLvl, VolumePresentation.AbsoluteCm3);
+                checkThat = Math.Round((TV_PIV * TV_PIV) / (TV * PIV), 3);
+            }
+            #endregion
             #region D__% or D__cc
             string d_at_v_pattern = @"^D(?<evalpt>\d+\p{P}\d+|\d+)(?<unit>(%|cc))$"; // matches D95%, D2cc
             var testMatch = Regex.Matches(myDataToGet, d_at_v_pattern);
@@ -1053,7 +1091,7 @@ namespace VMS.TPS
             {
                 Group eval = testMatch[0].Groups["evalpt"];
                 Group unit = testMatch[0].Groups["unit"];
-                DoseValue.DoseUnit du = DoseValue.DoseUnit.Gy;
+                DoseValue.DoseUnit du = DoseValue.DoseUnit.cGy;
                 DoseValue myD_something = new DoseValue(1000.1000, du);
                 //DoseValue myD_something;
                 double myD = Convert.ToDouble(eval.Value);
@@ -1082,7 +1120,7 @@ namespace VMS.TPS
             {
                 Group eval = testMatch[0].Groups["evalpt"];
                 Group unit = testMatch[0].Groups["unit"];
-                DoseValue.DoseUnit du = DoseValue.DoseUnit.Gy;
+                DoseValue.DoseUnit du = DoseValue.DoseUnit.cGy;
                 DoseValue myRequestedDose = new DoseValue(Convert.ToDouble(eval.Value), du);
 
                 if (unit.Value == "cc")
@@ -1091,43 +1129,6 @@ namespace VMS.TPS
                     checkThat = myPlan.GetVolumeAtDose(myStruct, myRequestedDose, VolumePresentation.Relative);
                 else
                     checkThat = -1.0;
-            }
-            #endregion
-            #region HomogenityIndex
-            if (myDataToGet == "HI" || myDataToGet == "hi" || myDataToGet == "Hi" || myDataToGet == "hI")
-            {
-                double d02 = Convert.ToDouble(myPlan.GetDoseAtVolume(myStruct, 2, VolumePresentation.Relative, DoseValuePresentation.Relative).ValueAsString);
-                double d98 = Convert.ToDouble(myPlan.GetDoseAtVolume(myStruct, 98, VolumePresentation.Relative, DoseValuePresentation.Relative).ValueAsString);
-                double d50 = Convert.ToDouble(myPlan.GetDoseAtVolume(myStruct, 50, VolumePresentation.Relative, DoseValuePresentation.Relative).ValueAsString);
-                checkThat = Math.Round((d02 - d98) / d50, 3);
-            }
-            #endregion
-            #region ConformityIndex
-            if (myDataToGet.Substring(0, 2) == "CI" || myDataToGet.Substring(0, 2) == "ci" || myDataToGet.Substring(0, 2) == "cI" || myDataToGet.Substring(0, 2) == "Ci")
-            {
-                //Conformity Index requres Body as input structure for dose calc and volume of target 
-                double isodoseLvl = Convert.ToDouble(myDataToGet.Remove(0, 2)) / 100;
-                Structure Body = myPlan.StructureSet.Structures.Where(x => x.DicomType == "EXTERNAL").Single();
-                double volIsodoseLvl = myPlan.GetVolumeAtDose(Body, myPlan.TotalDose * isodoseLvl, VolumePresentation.AbsoluteCm3);
-                checkThat = Math.Round(volIsodoseLvl / myStruct.Volume, 3);
-            }
-            #endregion
-            #region PaddickConformityIndex
-            if (myDataToGet.Substring(0, 2) == "PI" || myDataToGet.Substring(0, 2) == "pi" || myDataToGet.Substring(0, 2) == "pI" || myDataToGet.Substring(0, 2) == "Pi")
-            {
-                //Conformation number requres both body and PTV as input structures. 
-
-                
-                double TV = myStruct.Volume;
-                
-                double isodoseLvl = Convert.ToDouble(myDataToGet.Remove(0, 2)) / 100;
-                Structure Body = myPlan.StructureSet.Structures.Where(x => x.DicomType == "EXTERNAL").Single();
-               
-                double PIV = myPlan.GetVolumeAtDose(Body, myPlan.TotalDose * isodoseLvl, VolumePresentation.AbsoluteCm3);
-                double TV_PIV = myPlan.GetVolumeAtDose(myStruct, myPlan.TotalDose * isodoseLvl, VolumePresentation.AbsoluteCm3);
-                //Console.WriteLine("ttt {0} {1} {2}  ", TV_PIV, TV, PIV);
-                checkThat = Math.Round((TV_PIV * TV_PIV) / (TV * PIV), 3);
-                
             }
             #endregion
             if (Double.IsNaN(checkThat))
@@ -1173,63 +1174,44 @@ namespace VMS.TPS
                 checkThat = myMeanDose.Dose;
             }
             #endregion
+            #region VOLUME
+            if (myDataToGet == "vol" || myDataToGet == "Vol" || myDataToGet == "VOL")
+            {
+                checkThat = myStruct.Volume;
+            }
+            #endregion
             #region HomogenityIndex
             if (myDataToGet == "HI" || myDataToGet == "hi" || myDataToGet == "Hi" || myDataToGet == "hI")
             {
-                double d02 = 0.0;
-                double d98 = 0.0;
-                double d50 = 0.0;
-                // =  Convert.ToDouble(
-                d02 = myPlan.GetDoseAtVolume(myStruct, 2, VolumePresentation.Relative, DoseValuePresentation.Absolute).Dose;
-                d50 = myPlan.GetDoseAtVolume(myStruct, 50, VolumePresentation.Relative, DoseValuePresentation.Absolute).Dose;
-                d98 = myPlan.GetDoseAtVolume(myStruct, 98, VolumePresentation.Relative, DoseValuePresentation.Absolute).Dose;
-                checkThat = Math.Round((d02 - d98) / d50, 3);
+                double d02 = Convert.ToDouble(myPlan.GetDoseAtVolume(myStruct, 2, VolumePresentation.Relative, DoseValuePresentation.Relative).ValueAsString);
+                double d98 = Convert.ToDouble(myPlan.GetDoseAtVolume(myStruct, 98, VolumePresentation.Relative, DoseValuePresentation.Relative).ValueAsString);
+                double d50 = Convert.ToDouble(myPlan.GetDoseAtVolume(myStruct, 50, VolumePresentation.Relative, DoseValuePresentation.Relative).ValueAsString);
+                checkThat = Math.Round((d02 - d98) / d50, 5);
             }
             #endregion
             #region ConformityIndex
             if (myDataToGet.Substring(0, 2) == "CI" || myDataToGet.Substring(0, 2) == "ci" || myDataToGet.Substring(0, 2) == "cI" || myDataToGet.Substring(0, 2) == "Ci")
             {
+                //Cant handle plan sum
                 //Conformity Index requres Body as input structure for dose calc and volume of target 
-                double isodoseLvl = Convert.ToDouble(myDataToGet.Remove(0, 2)) / 100;
-                Structure Body = myPlan.StructureSet.Structures.Where(x => x.DicomType == "EXTERNAL").Single();
-
-                double totalDoseOfSum = 0;
-                foreach (PlanSetup IndividualPlan in myPlan.PlanSetups)
-                {
-                    totalDoseOfSum = totalDoseOfSum + IndividualPlan.TotalDose.Dose;
-                }
-                totalDoseOfSum = totalDoseOfSum * isodoseLvl;
-                DoseValue myDose = new DoseValue(totalDoseOfSum,DoseValue.DoseUnit.Gy);
-
-                double volIsodoseLvl = myPlan.GetVolumeAtDose(Body,myDose , VolumePresentation.AbsoluteCm3);
-                checkThat = Math.Round(volIsodoseLvl / myStruct.Volume, 3);
+                //double isodoseLvl = Convert.ToDouble(myDataToGet.Remove(0, 2)) / 100;
+                //Structure Body = myPlan.StructureSet.Structures.Where(x => x.DicomType == "EXTERNAL").Single();
+                //double volIsodoseLvl = myPlan.GetVolumeAtDose(Body, myPlan.TotalDose * isodoseLvl, VolumePresentation.AbsoluteCm3);
+                //checkThat = Math.Round(volIsodoseLvl / myStruct.Volume, 3);
+                checkThat = 0;
             }
             #endregion
             #region PaddickConformityIndex
             if (myDataToGet.Substring(0, 2) == "PI" || myDataToGet.Substring(0, 2) == "pi" || myDataToGet.Substring(0, 2) == "pI" || myDataToGet.Substring(0, 2) == "Pi")
             {
-                double TV = myStruct.Volume;
-                double isodoseLvl = Convert.ToDouble(myDataToGet.Remove(0, 2)) / 100;
-                Structure Body = myPlan.StructureSet.Structures.Where(x => x.DicomType == "EXTERNAL").Single();
-                double totalDoseOfSum = 0;
-                foreach (PlanSetup IndividualPlan in myPlan.PlanSetups)
-                {
-                    totalDoseOfSum = totalDoseOfSum + IndividualPlan.TotalDose.Dose;
-                }
-                totalDoseOfSum = totalDoseOfSum * isodoseLvl;
-                DoseValue myDose = new DoseValue(totalDoseOfSum, DoseValue.DoseUnit.Gy);
-                double PIV = myPlan.GetVolumeAtDose(Body, myDose, VolumePresentation.AbsoluteCm3);
-                double TV_PIV = myPlan.GetVolumeAtDose(myStruct, myDose, VolumePresentation.AbsoluteCm3);
-                //Console.WriteLine("ttt {0} {1} {2}  ", TV_PIV, TV, PIV);
-                checkThat = Math.Round((TV_PIV * TV_PIV) / (TV * PIV), 3);
-
-            }
-            #endregion
-
-            #region VOLUME
-            if (myDataToGet == "vol" || myDataToGet == "Vol" || myDataToGet == "VOL")
-            {
-                checkThat = myStruct.Volume;
+                ////Conformation number requres both body and PTV as input structures. 
+                //double TV = myStruct.Volume;
+                //double isodoseLvl = Convert.ToDouble(myDataToGet.Remove(0, 2)) / 100;
+                //Structure Body = myPlan.StructureSet.Structures.Where(x => x.DicomType == "EXTERNAL").Single();
+                //double PIV = myPlan.GetVolumeAtDose(Body, myPlan.TotalDose * isodoseLvl, VolumePresentation.AbsoluteCm3);
+                //double TV_PIV = myPlan.GetVolumeAtDose(myStruct, myPlan.TotalDose * isodoseLvl, VolumePresentation.AbsoluteCm3);
+                //checkThat = Math.Round((TV_PIV * TV_PIV) / (TV * PIV), 3);
+                checkThat = 0;
             }
             #endregion
             #region D__% or D__cc
@@ -1239,7 +1221,7 @@ namespace VMS.TPS
             {
                 Group eval = testMatch[0].Groups["evalpt"];
                 Group unit = testMatch[0].Groups["unit"];
-                DoseValue.DoseUnit du = DoseValue.DoseUnit.Gy;
+                DoseValue.DoseUnit du = DoseValue.DoseUnit.cGy;
                 DoseValue myD_something = new DoseValue(1000.1000, du);
                 //DoseValue myD_something;
                 double myD = Convert.ToDouble(eval.Value);
@@ -1268,7 +1250,7 @@ namespace VMS.TPS
             {
                 Group eval = testMatch[0].Groups["evalpt"];
                 Group unit = testMatch[0].Groups["unit"];
-                DoseValue.DoseUnit du = DoseValue.DoseUnit.Gy;
+                DoseValue.DoseUnit du = DoseValue.DoseUnit.cGy;
                 DoseValue myRequestedDose = new DoseValue(Convert.ToDouble(eval.Value), du);
 
                 if (unit.Value == "cc")
@@ -1279,7 +1261,6 @@ namespace VMS.TPS
                     checkThat = -1.0;
             }
             #endregion
-
             if (Double.IsNaN(checkThat))
                 checkThat = -1.0;
             if (checkThat == -1.0)
