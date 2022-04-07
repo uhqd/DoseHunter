@@ -1,2 +1,2 @@
 Cerveau,vol,mean,V20%
-PTV_LitOp1.1,vol,HI,PI
+PTV_LitOp1.1,vol,HI,PI95,CI95

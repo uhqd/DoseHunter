@@ -36,4 +36,4 @@ Plan name must contain a string:no:ff:RA:tutu
 Exclude if plan name contains:yes:CQ:PDIP:Octa
 
 # Explore Sum plans ?  if no, sum plans are ignored, yes to explore them
-Explore Sumplans:no
+Explore Sumplans:yes
