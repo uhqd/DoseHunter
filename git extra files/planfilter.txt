@@ -37,3 +37,7 @@ Exclude if plan name contains:yes:CQ:PDIP:Octa
 
 # Explore Sum plans ?  if no, sum plans are ignored, yes to explore them
 Explore Sumplans:yes
+
+# keep the COURSE it if it contains a string? If "yes", course will be kept only if they contain the string 
+Course name must contain a string:yes:C2:tutu
+
