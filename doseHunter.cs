@@ -65,6 +65,7 @@ namespace VMS.TPS
             string[] lineElements;
             string[] filterTags;
             string[] stringToContainToBeKept = null;
+            string[] stringinCourseToContainToBeKept = null;
             string[] stringToContainToBeExcluded = null;
             bool isADoublon = false;
             int verbose;
@@ -87,6 +88,7 @@ namespace VMS.TPS
             bool keepUnapprovedPlan, keepPAapprovedPlan, keepTAapprovedPlan;
             bool keepNamedPlan, keepUnamedPlan, keepRefusedPlan, keepRetiredPlan;
             bool keepIfPlanNameContainAstring, excludeIfPlannedNameContainAString;
+            bool keepIfCourseNameContainAstring;
             bool exploreSumPlan;
             #endregion
 
@@ -168,7 +170,7 @@ namespace VMS.TPS
             keepIfPlanNameContainAstring = false;
             excludeIfPlannedNameContainAString = false;
             exploreSumPlan = false;
-
+            keepIfCourseNameContainAstring = false;
 
             if (!File.Exists(planfilterfilename))
             {
@@ -294,6 +296,19 @@ namespace VMS.TPS
                                 exploreSumPlan = false;
                             }
                         }
+                        if (filterTags[0] == "Course name must contain a string")
+                        {
+                            if (filterTags[1] == "yes")
+                            {
+                                keepIfCourseNameContainAstring = true;
+                                stringinCourseToContainToBeKept = filterTags;
+                            }
+                            else if (filterTags[1] == "no")
+                                keepIfCourseNameContainAstring = false;
+                            else
+                                Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
+                        }
+
                     }
                 }
                 srf.Close();
@@ -462,9 +477,27 @@ namespace VMS.TPS
                         Console.ReadLine();
                 }
                 int keepThisPlan = 1;
+                int keepThisCourse = 1;
                 #region LOOP EVERY COURSE
+                #region TEST THE COURSE
                 foreach (Course course in p.Courses) // loop on the courses
                 {
+                    if (keepIfCourseNameContainAstring)
+                    {
+                        keepThisCourse = 0;
+                        for (int i = 2; i < stringinCourseToContainToBeKept.Length; i++)
+                        {
+                            if (course.Id.Contains(stringinCourseToContainToBeKept[i]))
+                                keepThisCourse = 1;
+                        }
+                        if (keepThisCourse == 0)
+                        {
+                            Console.WriteLine("         refused: course ID ({0}) does not contain one of the required strings", course.Id);
+                            swLogFile.WriteLine("         refused: course ID ({0}) does not contain one of the required strings", course.Id);
+                        }
+                    }
+                    #endregion
+
                     #region LOOP EVERY PLAN
                     foreach (PlanSetup plan in course.PlanSetups) // loop on the plans
                     {
@@ -477,6 +510,8 @@ namespace VMS.TPS
                         #endregion
 
                         keepThisPlan = 1;
+                        if (keepThisCourse == 0)
+                            keepThisPlan = 0;
                         totalNumberOfPlans++;
                         numberOfPlansForThisPatient++;
                         Console.WriteLine("  Plan: {0} (course: {1})", plan.Id, course.Id); // Verbose      
@@ -599,7 +634,7 @@ namespace VMS.TPS
                         #endregion
 
                         #region TEST IF PLAN CONTAINS OR DOES NOT CONTAIN SOME CHOSEN STRINGS
-                        if (keepThisPlan == 1) // TEST ALL STINGS TO KEEP PLANS
+                        if (keepThisPlan == 1) // TEST ALL STRINGS TO KEEP PLANS
                             if (keepIfPlanNameContainAstring)
                             {
                                 keepThisPlan = 0;
@@ -757,6 +792,12 @@ namespace VMS.TPS
                     if (exploreSumPlan)
                         foreach (PlanSum plan in course.PlanSums) // loop on the plans
                         {
+                            keepThisPlan = 1;
+                            totalNumberOfPlans++;
+                            numberOfPlansForThisPatient++;
+
+                            if (keepThisCourse == 0)
+                                keepThisPlan = 0;
                             #region VERBOSE
                             if (verbose > 5)
                             {
@@ -768,9 +809,7 @@ namespace VMS.TPS
 
                             #endregion
 
-                            keepThisPlan = 1;
-                            totalNumberOfPlans++;
-                            numberOfPlansForThisPatient++;
+                            
 
                             #region TEST THE PLAN
 
