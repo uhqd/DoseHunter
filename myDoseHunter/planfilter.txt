@@ -15,7 +15,7 @@ TreatApproved plan:yes
 PlanningApproved plan:yes
 
 # Unapproved? If "no" unapproved plans will be excluded. 
-Unapproved plan:no
+Unapproved plan:yes
 
 # Refused? If "no" refused plans will be excluded. 
 Refused plan:no
@@ -36,8 +36,11 @@ Plan name must contain a string:no:ff:RA:tutu
 Exclude if plan name contains:yes:CQ:PDIP:Octa
 
 # Explore Sum plans ?  if no, sum plans are ignored, yes to explore them
-Explore Sumplans:yes
+Explore Sumplans:no
+
+# Explore Uncertainty plans ?  if no, uncertainty plans are ignored, yes to explore them. Warning: it slows the execution 
+Explore uncertainty:no
 
 # keep the COURSE it if it contains a string? If "yes", course will be kept only if they contain the string 
-Course name must contain a string:yes:C2:tutu
+Course name must contain a string:yes:KL
 

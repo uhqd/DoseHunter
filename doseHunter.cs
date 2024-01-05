@@ -17,15 +17,167 @@ using VMS.TPS.Common.Model.API;
 using VMS.TPS.Common.Model.Types;
 using System.Threading;
 using System.IO;
+using System.Linq.Expressions;
+using System.Windows.Controls;
+using static VMS.TPS.Program;
+using System.IO.Packaging;
+using System.Diagnostics;
+using System.Reflection;
 
 namespace VMS.TPS
 {
     class Program
     {
+        #region Calculate DVH 
+        public class DVH
+        {
+            public DVH() {; }
+            #region CalculeDvh
+            internal DVHData CalculateDvh(PlanUncertainty uncert_plan, Structure structure, string volume_representation) // Function de generate DVHData variable
+            {
 
+                if (volume_representation.ToUpper() == "RELATIVE")
+                {
+                    return uncert_plan.GetDVHCumulativeData(structure,
+                    DoseValuePresentation.Absolute,
+                    VolumePresentation.Relative, 0.001);
+                }
+                else
+                {
+                    return uncert_plan.GetDVHCumulativeData(structure,
+                    DoseValuePresentation.Absolute,
+                    VolumePresentation.AbsoluteCm3, 0.001);
+                }
+            }
+            #endregion
+            #region extract_VolumeAtDose
+            internal double extract_VolumeAtDose(List<(double, double)> dvh_table, string Value, PlanSetup MyPlan, Structure MyStruct) // Function to calculate the Volume at certain Dose (Gy) from the DVHData
+            {
+                double closestVolume = 0;
+                double VolumeAsked = 0.0000, DoseAsked = 0.0000;
+                double PresDose = MyPlan.TotalDose.Dose;
+                double toleranceV = 0.01, ToleranceD = 0.01;
+                double StructVol = MyStruct.Volume;
+                List<(double, double)> AverageDVH = new List<(double, double)>();
+                List<(double, double)> DvhDiff = new List<(double, double)>();
+
+              
+
+                #region Mean, Median, Min et Max
+                if (Value.ToUpper() == "MEAN") // HDV cumule
+                {
+                    double Volcc = 0;
+                    for (int i = dvh_table.Count - 1; i > 0; i--)
+                    {
+                        Volcc = (1 - ((dvh_table[i].Item2/100) * StructVol)) - (1 - ((dvh_table[i-1].Item2/ 100) * StructVol));
+                        DvhDiff.Add((dvh_table[i].Item1,Volcc));
+                    }
+                    closestVolume = DvhDiff.Sum(x => x.Item1 * x.Item2) / StructVol;
+                    return closestVolume;
+                }
+                if (Value.ToUpper() == "MEDIAN")
+                {
+                    closestVolume = dvh_table.Where(pair => Math.Abs(pair.Item2) <= 50 + toleranceV && Math.Abs(pair.Item2 - VolumeAsked) >= 50 - toleranceV).Select(pair => pair.Item1).FirstOrDefault();
+                    return closestVolume;
+                }
+                if (Value.ToUpper() == "MIN")
+                {
+                    closestVolume = dvh_table.Where(pair => pair.Item2 == 100).Select(pair => pair.Item1).LastOrDefault();
+                    return closestVolume;
+                }
+                if (Value.ToUpper() == "MAX")
+                {
+                    closestVolume = dvh_table.Max(pair => pair.Item1);
+                    return closestVolume;
+                }
+                #endregion
+                #region D__% or D__cc
+                try
+                {
+                    if (Value.Contains("D")) // ne fonctionne pas sans cette condition
+                    {
+                        string d_at_v_pattern = @"^D(?<evalpt>\d+\p{P}\d+|\d+)(?<unit>(%|cc))$"; // matches D95%, D2cc
+                        var testMatch = Regex.Matches(Value, d_at_v_pattern);
+                        Group eval = testMatch[0].Groups["evalpt"];
+                        Group unit = testMatch[0].Groups["unit"];
+                        double.TryParse(eval.Value, out VolumeAsked);
+
+                        if (testMatch.Count != 0)
+                        {
+                            if (unit.Value == "%") //Relative volume
+                            {
+                                closestVolume = dvh_table.Where(pair => Math.Abs(pair.Item2 - VolumeAsked) < toleranceV).Select(pair => pair.Item1).FirstOrDefault();
+                                if (VolumeAsked == 100) // permet de gérer les multiples valeurs de dose pour le 100% de couverture dans l'HDV cumulatif
+                                {
+                                    closestVolume = dvh_table.Where(pair => Math.Abs(pair.Item2 - VolumeAsked) < toleranceV).Select(pair => pair.Item1).LastOrDefault();
+                                }
+                            }
+                            else if (unit.Value == "cc") //Absolute volume
+                            {
+                                closestVolume = dvh_table.Where(pair => Math.Abs((pair.Item2 / 100) * StructVol - VolumeAsked) < toleranceV).Select(pair => pair.Item1).FirstOrDefault();
+                            }
+                            return closestVolume;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString(), " for {0} ", Value);
+                }
+                #endregion
+                #region V__Gy
+                try
+                {
+                    if (Value.Contains("V")) // ne fonctionne pas sans cette condition
+                    {
+                        string v_at_d_pattern = @"^V(?<evalpt>\d+\p{P}\d+|\d+)(?<unit>(%|cc))$"; // matches V50.4cc or V50.4%                                                                                            
+                        var testMatch = Regex.Matches(Value, v_at_d_pattern);
+                        Group eval = testMatch[0].Groups["evalpt"];
+                        Group unit = testMatch[0].Groups["unit"];
+                        double.TryParse(eval.Value, out DoseAsked);
+
+                        if (testMatch.Count != 0) // count is 1
+                        {
+                            if (unit.Value == "%") //Relative Volume
+                            {
+                                closestVolume = dvh_table.Where(pair => Math.Abs(pair.Item1 - DoseAsked) < ToleranceD).Select(pair => pair.Item2).FirstOrDefault();
+                                if (VolumeAsked == 100) // permet de gérer les multiples valeurs de couverture pour la dose dans l'HDV cumulatif
+                                {
+                                    closestVolume = dvh_table.Where(pair => Math.Abs(pair.Item1 - DoseAsked) < ToleranceD).Select(pair => pair.Item2).LastOrDefault();
+                                }
+                            }
+                            else if (unit.Value == "cc") //Absolute volume
+                            {
+                                closestVolume = dvh_table.Where(pair => Math.Abs(pair.Item1 - DoseAsked) < ToleranceD).Select(pair => pair.Item2 * StructVol / 100).FirstOrDefault();
+                            }
+                            return closestVolume;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString(), " for {0} ", Value);
+                }
+                return closestVolume;
+            }
+            #endregion
+            #endregion
+            #region CurveData2Table
+            internal List<(double, double)> CurveData2Table(DVHData dvh_data)
+            {
+                List<(double, double)> dvh_table = new List<(double, double)>(); //Table that will store dvh curve
+                //Place the DVH Data into a table
+                foreach (DVHPoint dvh_points in dvh_data.CurveData)
+                {
+                    dvh_table.Add((dvh_points.DoseValue.Dose, dvh_points.Volume));
+                }
+                return dvh_table;
+            }
+            #endregion
+        }
+        #endregion
         [STAThread]
         #region EMPTY MAIN PROGRAM
-
 
         static void Main(string[] args)
         {
@@ -47,6 +199,8 @@ namespace VMS.TPS
         #region EXECUTE PROGRAM, THE REAL MAIN
         static void Execute(Application app)
         {
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
             #region WELCOME MESSAGE
             Console.WriteLine("-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-");
             Console.WriteLine("");
@@ -90,6 +244,7 @@ namespace VMS.TPS
             bool keepIfPlanNameContainAstring, excludeIfPlannedNameContainAString;
             bool keepIfCourseNameContainAstring;
             bool exploreSumPlan;
+            bool exploreUP;
             #endregion
 
             #region READ THE ID FILE
@@ -170,6 +325,7 @@ namespace VMS.TPS
             keepIfPlanNameContainAstring = false;
             excludeIfPlannedNameContainAString = false;
             exploreSumPlan = false;
+            exploreUP = false;
             keepIfCourseNameContainAstring = false;
 
             if (!File.Exists(planfilterfilename))
@@ -296,6 +452,18 @@ namespace VMS.TPS
                                 exploreSumPlan = false;
                             }
                         }
+                        if (filterTags[0] == "Explore uncertainty")
+                        {
+                            if (filterTags[1] == "yes")
+                            {
+                                exploreUP = true;
+                            }
+                            else if (filterTags[1] == "no")
+                            {
+                                exploreUP = false;
+                            }
+                        }
+
                         if (filterTags[0] == "Course name must contain a string")
                         {
                             if (filterTags[1] == "yes")
@@ -667,6 +835,8 @@ namespace VMS.TPS
                         #endregion
 
                         #endregion
+
+
                         #region VERBOSE
                         if (verbose > 5)
                         {
@@ -674,7 +844,112 @@ namespace VMS.TPS
                             Console.ReadLine();
                         }
                         #endregion
+                        #region Uncertainty plan
+                        // uncertainties analysis must be done before plan analysis. Bug in ESAPI15. 
+                        // see reddit thread:
+                        // https://www.reddit.com/r/esapi/comments/13ok5g2/plan_uncertainty_dvh_bug/
+                        if (exploreUP)
+                        {
+                            foreach (var pu in plan.PlanUncertainties)
+                            {
+                                if (pu != null)
+                                {
+                                    double MU = 0;
 
+                                    foreach (Beam beam in plan.Beams)
+                                    {
+                                        if (!beam.IsSetupField)
+                                            MU = MU + Math.Round(beam.Meterset.Value, 2);
+                                    }
+                                    //MI
+                                    var MI = Math.Round(MU / (plan.DosePerFraction.Dose), 3);
+                                    DVH MyDVH = new DVH();
+
+                                    swData.Write("{0};{1};{2} ({11});{3};{4};{5};{6};{7};{8};{9};{10}",
+                                    p.Id, course.Id, pu.Id, plan.CreationDateTime, plan.CreationUserName, plan.TotalDose.ValueAsString, plan.DosePerFraction.ValueAsString,
+                                    plan.NumberOfFractions, MU, MI, Math.Round(plan.PlanNormalizationValue, 1), plan.Id);
+
+                                    foreach (string myString in list_struct) // loop on lines of user dose index (1 by struct)
+                                    {
+                                        // get separated elements of a line (separator is a ,)
+                                        lineElements = myString.Split(',');
+                                        // get the different possible names of the structure (separate by a ;)
+                                        string[] myFirstName = lineElements[0].Split(';');
+
+                                        StructureSet ss = plan.StructureSet;
+                                        bool foundOneStruct = false;
+                                        foreach (string myDiffStrucNames in myFirstName) // loop on the different names of a same struct
+                                        {
+                                            if (foundOneStruct == false)
+                                            {
+                                                struct1 = ss.Structures.FirstOrDefault(x => x.Id == myDiffStrucNames);
+                                                if (struct1 != null) // does the stucture exist?
+                                                {
+                                                    if (!struct1.IsEmpty) // Is it empty?
+                                                    {
+                                                        foundOneStruct = true;
+                                                        try
+                                                        {
+                                                            DVHData DVH_uncert = MyDVH.CalculateDvh(pu, struct1, "relative");
+                                                            List<(double, double)> dvhPU = MyDVH.CurveData2Table(DVH_uncert);
+
+                                                            if (!dvhPU.Equals(null))
+                                                            {
+
+                                                                swLogFile.WriteLine("    {0} found in {1}", myDiffStrucNames, pu.Id); // verbose
+                                                                if (verbose > 0)
+                                                                    Console.WriteLine("    {0} found in {1} ({2})", myDiffStrucNames, pu.Id, plan.Id);
+                                                                foreach (string dataToGet in lineElements.Skip(1)) // loop on index
+                                                                {
+                                                                    if (verbose > 5)
+                                                                        Console.WriteLine(" Gimme the {0} for {1}\r\n", dataToGet, struct1.Id);
+
+                                                                    double thisValueImLookingFor = -99.999;
+
+                                                                    thisValueImLookingFor = MyDVH.extract_VolumeAtDose(dvhPU, dataToGet, plan, struct1);
+                                                                    if (thisValueImLookingFor != -1.0)
+                                                                    {
+                                                                        swLogFile.WriteLine("  {0} for {1} is {2:0.00}", dataToGet, struct1.Id, thisValueImLookingFor);
+                                                                        swData.Write(";{0:0.00}", Math.Round(thisValueImLookingFor, 5));
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        swData.Write(";"); // if data impossible to extract
+                                                                    }
+                                                                }
+                                                                dvhPU.Clear();
+                                                            }
+                                                            else
+                                                            {
+                                                                Console.WriteLine("DVH is empty");
+                                                                swLogFile.WriteLine("DVH is empty");
+                                                            }
+                                                        }
+
+                                                        catch (Exception ex)
+                                                        {
+                                                            swLogFile.WriteLine(" Uncertainty plan not found; exception  {0} {1} plan", ex.Message, pu.Id);
+                                                            Console.WriteLine(" Uncertainty plan not found; exception  {0} pour le plan {1}", ex, pu.Id);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        if (foundOneStruct == false)
+                                        {
+                                            Console.WriteLine("    {0} not found ********", myFirstName[0]);
+                                            swLogFile.WriteLine("    {0} not found ********", myFirstName[0]);
+                                            foreach (string skippedData in lineElements.Skip(1))
+                                                swData.Write(";");
+                                            //swData.Write(",");
+                                        }
+                                    }
+                                }
+                                swData.WriteLine(";");
+                            }
+                        }
+                        #endregion
                         #region GET THE DATA 
 
                         if (keepThisPlan == 1)
@@ -773,9 +1048,11 @@ namespace VMS.TPS
                                     //swData.Write(",");
                                 }
                             }
-                            swData.Write("\r\n");
+                            swData.WriteLine(";");
+
                         }
                         //swData.Write("\r\n");
+
                         #endregion
                         #region VERBOSE
                         if (verbose > 5)
@@ -809,7 +1086,7 @@ namespace VMS.TPS
 
                             #endregion
 
-                            
+
 
                             #region TEST THE PLAN
 
@@ -904,7 +1181,7 @@ namespace VMS.TPS
                                 int nTotalFractionOfSum = 0;
                                 double totalDoseOfSum = 0;
                                 double dosePerFractionOfSum = 0;
-                                
+
                                 foreach (PlanSetup IndividualPlan in plan.PlanSetups)
                                 {
                                     foreach (Beam beam in IndividualPlan.Beams)
@@ -916,7 +1193,7 @@ namespace VMS.TPS
                                     totalDoseOfSum = totalDoseOfSum + IndividualPlan.TotalDose.Dose;
                                     lastTime = Convert.ToDateTime(IndividualPlan.CreationDateTime);
                                 }
-                                
+
                                 dosePerFractionOfSum = totalDoseOfSum / nTotalFractionOfSum;
                                 var MI = Math.Round(MU / dosePerFractionOfSum, 3);
                                 #endregion
@@ -973,7 +1250,7 @@ namespace VMS.TPS
                                                         {
                                                             swData.Write(";"); // if data impossible to extract
                                                         }
-                                                        
+
                                                     }
                                                     #endregion
                                                 }
@@ -1009,6 +1286,7 @@ namespace VMS.TPS
                         } //end of plan loop
                     #endregion
 
+
                 } // end of course loop
                 #endregion
 
@@ -1019,17 +1297,21 @@ namespace VMS.TPS
             #endregion
 
             #region FINAL MESSAGE
+
+            stopwatch.Stop();
             if (verbose > 0)
             {
                 Console.WriteLine("Number of accepted/total patients: {1}/{0} (accepted : at least one accepted plan)", nPatient, nPatientWithAnAcceptedPlan);
                 Console.WriteLine("Number of excluded IDs {0} (more than once in id.txt)", nDoublons);
                 Console.WriteLine("Number of accepted/total plans: {0}/{1}", numberOfAcceptedPlans, totalNumberOfPlans);
                 Console.WriteLine("Please type Enter\n");
+                Console.WriteLine("Execution time = {0:0.00} s", stopwatch.ElapsedMilliseconds / 1000);
                 Console.ReadLine(); // Ask user to type enter to finish.
 
                 swLogFile.WriteLine("Number of accepted/total patients: {1}/{0} (accepted : at least one accepted plan)", nPatient, nPatientWithAnAcceptedPlan);
                 swLogFile.WriteLine("Number of excluded IDs {0} (more than once in id.txt)", nDoublons);
                 swLogFile.WriteLine("Number of accepted/total plans: {0}/{1}", numberOfAcceptedPlans, totalNumberOfPlans);
+                swLogFile.WriteLine("Execution time = {0:0.00} s", stopwatch.ElapsedMilliseconds / 1000);
 
 
             }
@@ -1038,7 +1320,6 @@ namespace VMS.TPS
             #region CLOSE FILES
             swLogFile.Close();
             swData.Close();
-
             #endregion
         }
         #endregion
@@ -1048,39 +1329,39 @@ namespace VMS.TPS
         {
             int verbose = 0;
             double checkThat = -1.0;
+
             if (verbose > 5)
                 Console.WriteLine("--> looking for {0} for {1} in {2}", myDataToGet, myStruct.Id, myPlan.Id);
             #region MAX DOSE       
-            if (myDataToGet == "max" || myDataToGet == "Max" || myDataToGet == "MAX")
+            if (myDataToGet.ToUpper() == "MAX")
             {
-
                 var myMaxDose = dvh.MaxDose;
                 checkThat = myMaxDose.Dose;
             }
             #endregion
             #region MIN DOSE       
-            if (myDataToGet == "min" || myDataToGet == "Min" || myDataToGet == "MIN")
+            if (myDataToGet.ToUpper() == "MIN")
             {
                 var myMinDose = dvh.MinDose;
                 checkThat = myMinDose.Dose;
             }
             #endregion
             #region MEDIAN DOSE
-            if (myDataToGet == "median" || myDataToGet == "Median" || myDataToGet == "MEDIAN")
+            if (myDataToGet.ToUpper() == "MEDIAN")
             {
                 DoseValue myMedianDose = myPlan.GetDoseAtVolume(myStruct, 50, VolumePresentation.Relative, DoseValuePresentation.Absolute);
                 checkThat = myMedianDose.Dose;
             }
             #endregion
             #region MEAN DOSE
-            if (myDataToGet == "mean" || myDataToGet == "Mean" || myDataToGet == "MEAN")
+            if (myDataToGet.ToUpper() == "MEAN")
             {
                 var myMeanDose = dvh.MeanDose;
                 checkThat = myMeanDose.Dose;
             }
             #endregion
             #region VOLUME
-            if (myDataToGet == "vol" || myDataToGet == "Vol" || myDataToGet == "VOL")
+            if (myDataToGet.ToUpper() == "VOL")
             {
                 checkThat = myStruct.Volume;
             }
@@ -1133,7 +1414,7 @@ namespace VMS.TPS
             }
             #endregion
             #region HomogenityIndex
-            if (myDataToGet == "HI" || myDataToGet == "hi" || myDataToGet == "Hi" || myDataToGet == "hI")
+            if (myDataToGet.ToUpper() == "HI")
             {
                 double d02 = Convert.ToDouble(myPlan.GetDoseAtVolume(myStruct, 2, VolumePresentation.Relative, DoseValuePresentation.Relative).ValueAsString);
                 double d98 = Convert.ToDouble(myPlan.GetDoseAtVolume(myStruct, 98, VolumePresentation.Relative, DoseValuePresentation.Relative).ValueAsString);
@@ -1142,7 +1423,7 @@ namespace VMS.TPS
             }
             #endregion
             #region ConformityIndex
-            if (myDataToGet.Substring(0, 2) == "CI" || myDataToGet.Substring(0, 2) == "ci" || myDataToGet.Substring(0, 2) == "cI" || myDataToGet.Substring(0, 2) == "Ci")
+            if (myDataToGet.Substring(0, 2).ToUpper() == "CI")
             {
                 //Conformity Index requres Body as input structure for dose calc and volume of target 
                 double isodoseLvl = Convert.ToDouble(myDataToGet.Remove(0, 2)) / 100;
@@ -1152,21 +1433,53 @@ namespace VMS.TPS
             }
             #endregion
             #region PaddickConformityIndex
-            if (myDataToGet.Substring(0, 2) == "PI" || myDataToGet.Substring(0, 2) == "pi" || myDataToGet.Substring(0, 2) == "pI" || myDataToGet.Substring(0, 2) == "Pi")
+            if (myDataToGet.Substring(0, 2).ToUpper() == "PI")
             {
                 //Conformation number requres both body and PTV as input structures. 
 
-                
+
                 double TV = myStruct.Volume;
-                
+
                 double isodoseLvl = Convert.ToDouble(myDataToGet.Remove(0, 2)) / 100;
                 Structure Body = myPlan.StructureSet.Structures.Where(x => x.DicomType == "EXTERNAL").Single();
-               
+
                 double PIV = myPlan.GetVolumeAtDose(Body, myPlan.TotalDose * isodoseLvl, VolumePresentation.AbsoluteCm3);
                 double TV_PIV = myPlan.GetVolumeAtDose(myStruct, myPlan.TotalDose * isodoseLvl, VolumePresentation.AbsoluteCm3);
                 //Console.WriteLine("ttt {0} {1} {2}  ", TV_PIV, TV, PIV);
                 checkThat = Math.Round((TV_PIV * TV_PIV) / (TV * PIV), 3);
-                
+
+            }
+            #endregion
+            #region GradientIndex
+            if (myDataToGet.Substring(0, 2).ToUpper() == "GI")
+            {
+                double TV = myStruct.Volume, isodoseLvl = 1;
+                if (!myPlan.StructureSet.Structures.Any(x => x.DicomType.Substring(0, 3) == "ITV"))
+                {
+                    isodoseLvl = 0.833333333; //  Dose ITV/Dose PTV in stereo pulmonary case 
+                }
+                double v100 = 0.0;
+                double v50 = 0.0;
+                Structure Body = myPlan.StructureSet.Structures.Where(x => x.DicomType == "EXTERNAL").Single();
+                v50 = myPlan.GetVolumeAtDose(Body, myPlan.TotalDose * isodoseLvl * 0.5, VolumePresentation.AbsoluteCm3);
+                v100 = myPlan.GetVolumeAtDose(Body, myPlan.TotalDose * isodoseLvl, VolumePresentation.AbsoluteCm3);
+                checkThat = Math.Round((v50 / v100), 2);
+            }
+            #endregion
+            #region RCI
+            if (myDataToGet.Substring(0, 3).ToUpper() == "RCI")
+            {
+                if (myStruct.Id.Substring(0, 3).ToUpper() == "PTV")
+                {
+                    double TV = myStruct.Volume, isodoseLvl = 1;
+                    if (!myPlan.StructureSet.Structures.Any(x => x.DicomType.Substring(0, 3) == "ITV"))
+                    {
+                        isodoseLvl = 0.833333333; //  Dose ITV/Dose PTV in stereo pulmonary case 
+                    }
+
+                    double volTIP = myPlan.GetVolumeAtDose(myStruct, myPlan.TotalDose * isodoseLvl, VolumePresentation.AbsoluteCm3);
+                    checkThat = Math.Round(volTIP / TV, 3);
+                }
             }
             #endregion
             if (Double.IsNaN(checkThat))
@@ -1184,7 +1497,7 @@ namespace VMS.TPS
             if (verbose > 5)
                 Console.WriteLine("--> looking for {0} for {1} in {2}", myDataToGet, myStruct.Id, myPlan.Id);
             #region MAX DOSE       
-            if (myDataToGet == "max" || myDataToGet == "Max" || myDataToGet == "MAX")
+            if (myDataToGet.ToUpper() == "MAX")
             {
 
                 var myMaxDose = dvh.MaxDose;
@@ -1192,28 +1505,28 @@ namespace VMS.TPS
             }
             #endregion
             #region MIN DOSE       
-            if (myDataToGet == "min" || myDataToGet == "Min" || myDataToGet == "MIN")
+            if (myDataToGet.ToUpper() == "MIN")
             {
                 var myMinDose = dvh.MinDose;
                 checkThat = myMinDose.Dose;
             }
             #endregion
             #region MEDIAN DOSE
-            if (myDataToGet == "median" || myDataToGet == "Median" || myDataToGet == "MEDIAN")
+            if (myDataToGet.ToUpper() == "MEDIAN")
             {
                 DoseValue myMedianDose = myPlan.GetDoseAtVolume(myStruct, 50, VolumePresentation.Relative, DoseValuePresentation.Absolute);
                 checkThat = myMedianDose.Dose;
             }
             #endregion
             #region MEAN DOSE
-            if (myDataToGet == "mean" || myDataToGet == "Mean" || myDataToGet == "MEAN")
+            if (myDataToGet.ToUpper() == "MEAN")
             {
                 var myMeanDose = dvh.MeanDose;
                 checkThat = myMeanDose.Dose;
             }
             #endregion
             #region HomogenityIndex
-            if (myDataToGet == "HI" || myDataToGet == "hi" || myDataToGet == "Hi" || myDataToGet == "hI")
+            if (myDataToGet.ToUpper() == "HI")
             {
                 double d02 = 0.0;
                 double d98 = 0.0;
@@ -1226,7 +1539,7 @@ namespace VMS.TPS
             }
             #endregion
             #region ConformityIndex
-            if (myDataToGet.Substring(0, 2) == "CI" || myDataToGet.Substring(0, 2) == "ci" || myDataToGet.Substring(0, 2) == "cI" || myDataToGet.Substring(0, 2) == "Ci")
+            if (myDataToGet.Substring(0, 2).ToUpper() == "CI")
             {
                 //Conformity Index requres Body as input structure for dose calc and volume of target 
                 double isodoseLvl = Convert.ToDouble(myDataToGet.Remove(0, 2)) / 100;
@@ -1238,14 +1551,14 @@ namespace VMS.TPS
                     totalDoseOfSum = totalDoseOfSum + IndividualPlan.TotalDose.Dose;
                 }
                 totalDoseOfSum = totalDoseOfSum * isodoseLvl;
-                DoseValue myDose = new DoseValue(totalDoseOfSum,DoseValue.DoseUnit.Gy);
+                DoseValue myDose = new DoseValue(totalDoseOfSum, DoseValue.DoseUnit.Gy);
 
-                double volIsodoseLvl = myPlan.GetVolumeAtDose(Body,myDose , VolumePresentation.AbsoluteCm3);
+                double volIsodoseLvl = myPlan.GetVolumeAtDose(Body, myDose, VolumePresentation.AbsoluteCm3);
                 checkThat = Math.Round(volIsodoseLvl / myStruct.Volume, 3);
             }
             #endregion
             #region PaddickConformityIndex
-            if (myDataToGet.Substring(0, 2) == "PI" || myDataToGet.Substring(0, 2) == "pi" || myDataToGet.Substring(0, 2) == "pI" || myDataToGet.Substring(0, 2) == "Pi")
+            if (myDataToGet.Substring(0, 2).ToUpper() == "PI")
             {
                 double TV = myStruct.Volume;
                 double isodoseLvl = Convert.ToDouble(myDataToGet.Remove(0, 2)) / 100;
@@ -1266,7 +1579,7 @@ namespace VMS.TPS
             #endregion
 
             #region VOLUME
-            if (myDataToGet == "vol" || myDataToGet == "Vol" || myDataToGet == "VOL")
+            if (myDataToGet.ToUpper() == "VOL")
             {
                 checkThat = myStruct.Volume;
             }
@@ -1326,6 +1639,5 @@ namespace VMS.TPS
             return (checkThat);
         }
         #endregion
-
     }
 }

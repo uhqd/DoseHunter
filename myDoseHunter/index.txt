@@ -1,2 +1,9 @@
-Cerveau,vol,mean,V20%
-PTV_LitOp1.1,vol,HI,PI95,CI95
+GTVp1,V50%,V70.62cc,max,median,min,mean
+PTVP0,V50%,V70.62cc,max,median,min,mean
+PTVP16,V50%,V70.62cc,max,median,min,mean
+PTVP33,V50%,V70.62cc,max,median,min,mean
+PTVP50,V50%,V70.62cc,max,median,min,mean
+PTVP66,V50%,V70.62cc,max,median,min,mean
+PTVP83,V50%,V70.62cc,max,median,min,mean
+ITV 6ph1,V50%,V70.62cc,max,median,min,mean 
+PTV 6ph1,V50%,V70.62cc,max,median,min,mean
