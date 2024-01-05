@@ -17,7 +17,7 @@ If you like and use Dose Hunter, do not hesitate to tell us. Moreover please add
 
 ## Authors
 
-**Luc Simon<sup>1,2</sup>,François-Xavier Arnaud<sup>2</sup>, [Bradley Beeksma](https://github.com/BradBeeksma)<sup>3</sup>**
+**[Luc Simon](https://github.com/uhqd/)<sup>1,2</sup>, [François-Xavier Arnaud](https://github.com/fxarnaud/)<sup>2</sup>, [Bradley Beeksma](https://github.com/BradBeeksma)<sup>3</sup>, [Killian Lacaze](https://github.com/lacazek), Farzam Fayah**
 
 (1)[CRCT](https://www.crct-inserm.fr/), Toulouse, France
 
@@ -26,7 +26,11 @@ If you like and use Dose Hunter, do not hesitate to tell us. Moreover please add
 (3)[Calvary Mater Newcastle](https://www.calvarycare.org.au/public-hospital-mater-newcastle/), New Castle, Australia
 
 
-
+- L. Simon: 90% of the code (input, output, etc.)
+- F.-X. Arnaud: help for the 'oh my god' regex 
+- B. Beeksma: add the Paddick, MU, ... 
+- K. Lacaze: add the plan uncertainties analysis
+- F. Sayah: help KL finding the bug 
 
 
 
