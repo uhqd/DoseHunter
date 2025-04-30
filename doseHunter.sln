@@ -1,10 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31321.278
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35931.197 d17.13
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DoseFinder2", "DoseFinder2.csproj", "{1DF4FE30-64DA-4845-B7F6-84E9B9712DB4}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "doseHunter", "doseHunter.csproj", "{212AF853-1C0C-4640-896C-A37073DF323F}"
 EndProject
 Global
@@ -13,10 +11,6 @@ Global
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{1DF4FE30-64DA-4845-B7F6-84E9B9712DB4}.Debug|x64.ActiveCfg = Debug|x64
-		{1DF4FE30-64DA-4845-B7F6-84E9B9712DB4}.Debug|x64.Build.0 = Debug|x64
-		{1DF4FE30-64DA-4845-B7F6-84E9B9712DB4}.Release|x64.ActiveCfg = Release|x64
-		{1DF4FE30-64DA-4845-B7F6-84E9B9712DB4}.Release|x64.Build.0 = Release|x64
 		{212AF853-1C0C-4640-896C-A37073DF323F}.Debug|x64.ActiveCfg = Debug|x64
 		{212AF853-1C0C-4640-896C-A37073DF323F}.Debug|x64.Build.0 = Debug|x64
 		{212AF853-1C0C-4640-896C-A37073DF323F}.Release|x64.ActiveCfg = Release|x64

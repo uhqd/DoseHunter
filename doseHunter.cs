@@ -356,109 +356,109 @@ namespace VMS.TPS
                         }
                         if (filterTags[0] == "TreatApproved plan")
                         {
-                            if (filterTags[1] == "yes")
+                            if (filterTags[1].ToLower() == "yes")
                                 keepTAapprovedPlan = true;
-                            else if (filterTags[1] == "no")
+                            else if (filterTags[1].ToLower() == "no")
                                 keepTAapprovedPlan = false;
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
                         if (filterTags[0] == "PlanningApproved plan")
                         {
-                            if (filterTags[1] == "yes")
+                            if (filterTags[1].ToLower() == "yes")
                                 keepPAapprovedPlan = true;
-                            else if (filterTags[1] == "no")
+                            else if (filterTags[1].ToLower() == "no")
                                 keepPAapprovedPlan = false;
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
                         if (filterTags[0] == "Unapproved plan")
                         {
-                            if (filterTags[1] == "yes")
+                            if (filterTags[1].ToLower() == "yes")
                                 keepUnapprovedPlan = true;
-                            else if (filterTags[1] == "no")
+                            else if (filterTags[1].ToLower() == "no")
                                 keepUnapprovedPlan = false;
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
                         if (filterTags[0] == "Named plan")
                         {
-                            if (filterTags[1] == "yes")
+                            if (filterTags[1].ToLower() == "yes")
                                 keepNamedPlan = true;
-                            else if (filterTags[1] == "no")
+                            else if (filterTags[1].ToLower() == "no")
                                 keepNamedPlan = false;
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
                         if (filterTags[0] == "Unnamed plan")
                         {
-                            if (filterTags[1] == "yes")
+                            if (filterTags[1].ToLower() == "yes")
                                 keepUnamedPlan = true;
-                            else if (filterTags[1] == "no")
+                            else if (filterTags[1].ToLower() == "no")
                                 keepUnamedPlan = false;
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
                         if (filterTags[0] == "Refused plan")
                         {
-                            if (filterTags[1] == "yes")
+                            if (filterTags[1].ToLower() == "yes")
                                 keepRefusedPlan = true;
-                            else if (filterTags[1] == "no")
+                            else if (filterTags[1].ToLower() == "no")
                                 keepRefusedPlan = false;
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
                         if (filterTags[0] == "Retired plan")
                         {
-                            if (filterTags[1] == "yes")
+                            if (filterTags[1].ToLower() == "yes")
                                 keepRetiredPlan = true;
-                            else if (filterTags[1] == "no")
+                            else if (filterTags[1].ToLower() == "no")
                                 keepRetiredPlan = false;
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
                         if (filterTags[0] == "Plan name must contain a string")
                         {
-                            if (filterTags[1] == "yes")
+                            if (filterTags[1].ToLower() == "yes")
                             {
                                 keepIfPlanNameContainAstring = true;
                                 stringToContainToBeKept = filterTags;
                             }
-                            else if (filterTags[1] == "no")
+                            else if (filterTags[1].ToLower() == "no")
                                 keepIfPlanNameContainAstring = false;
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
                         if (filterTags[0] == "Exclude if plan name contains")
                         {
-                            if (filterTags[1] == "yes")
+                            if (filterTags[1].ToLower() == "yes")
                             {
                                 excludeIfPlannedNameContainAString = true;
                                 stringToContainToBeExcluded = filterTags;
                             }
-                            else if (filterTags[1] == "no")
+                            else if (filterTags[1].ToLower() == "no")
                                 excludeIfPlannedNameContainAString = false;
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
                         if (filterTags[0] == "Explore Sumplans")
                         {
-                            if (filterTags[1] == "yes")
+                            if (filterTags[1].ToLower() == "yes")
                             {
                                 exploreSumPlan = true;
                             }
-                            else if (filterTags[1] == "no")
+                            else if (filterTags[1].ToLower() == "no")
                             {
                                 exploreSumPlan = false;
                             }
                         }
                         if (filterTags[0] == "Explore uncertainty")
                         {
-                            if (filterTags[1] == "yes")
+                            if (filterTags[1].ToLower() == "yes")
                             {
                                 exploreUP = true;
                             }
-                            else if (filterTags[1] == "no")
+                            else if (filterTags[1].ToLower() == "no")
                             {
                                 exploreUP = false;
                             }
@@ -466,12 +466,12 @@ namespace VMS.TPS
 
                         if (filterTags[0] == "Course name must contain a string")
                         {
-                            if (filterTags[1] == "yes")
+                            if (filterTags[1].ToLower() == "yes")
                             {
                                 keepIfCourseNameContainAstring = true;
                                 stringinCourseToContainToBeKept = filterTags;
                             }
-                            else if (filterTags[1] == "no")
+                            else if (filterTags[1].ToLower() == "no")
                                 keepIfCourseNameContainAstring = false;
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
@@ -882,7 +882,7 @@ namespace VMS.TPS
                                         {
                                             if (foundOneStruct == false)
                                             {
-                                                struct1 = ss.Structures.FirstOrDefault(x => x.Id == myDiffStrucNames);
+                                                struct1 = ss.Structures.FirstOrDefault(x => x.Id.ToLower() == myDiffStrucNames.ToLower());
                                                 if (struct1 != null) // does the stucture exist?
                                                 {
                                                     if (!struct1.IsEmpty) // Is it empty?
@@ -1003,7 +1003,7 @@ namespace VMS.TPS
                                 {
                                     if (foundOneStruct == false)
                                     {
-                                        struct1 = ss.Structures.FirstOrDefault(x => x.Id == myDiffStrucNames);
+                                        struct1 = ss.Structures.FirstOrDefault(x => x.Id.ToLower() == myDiffStrucNames.ToLower());
                                         if (struct1 != null) // does the stucture exist?
                                         {
                                             if (!struct1.IsEmpty) // Is it empty?
@@ -1332,6 +1332,20 @@ namespace VMS.TPS
 
             if (verbose > 5)
                 Console.WriteLine("--> looking for {0} for {1} in {2}", myDataToGet, myStruct.Id, myPlan.Id);
+
+            #region GI       
+            if (myDataToGet.ToUpper() == "GI")
+            {
+                DoseValue prescription = myPlan.TotalDose;
+                DoseValue doseHalf = new DoseValue(0.5 * prescription.Dose, prescription.Unit);
+                //new DoseValue(0.5 * prescription.Dose, prescription.Unit);
+                Structure Body = myPlan.StructureSet.Structures.Single(s => s.DicomType == "BODY");
+                double myFull = myPlan.GetVolumeAtDose(Body,prescription,VolumePresentation.AbsoluteCm3);
+                double myHalf = myPlan.GetVolumeAtDose(Body, prescription, VolumePresentation.AbsoluteCm3);
+
+                checkThat = 100*myHalf/myFull;
+            }
+            #endregion
             #region MAX DOSE       
             if (myDataToGet.ToUpper() == "MAX")
             {
@@ -1450,6 +1464,7 @@ namespace VMS.TPS
 
             }
             #endregion
+            /* DEPRECATED
             #region GradientIndex
             if (myDataToGet.Substring(0, 2).ToUpper() == "GI")
             {
@@ -1465,6 +1480,7 @@ namespace VMS.TPS
                 v100 = myPlan.GetVolumeAtDose(Body, myPlan.TotalDose * isodoseLvl, VolumePresentation.AbsoluteCm3);
                 checkThat = Math.Round((v50 / v100), 2);
             }
+            */
             #endregion
             #region RCI
             if (myDataToGet.Substring(0, 3).ToUpper() == "RCI")
