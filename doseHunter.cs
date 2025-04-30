@@ -1464,8 +1464,9 @@ namespace VMS.TPS
 
             }
             #endregion
-            /* DEPRECATED
             #region GradientIndex
+            /* DEPRECATED
+
             if (myDataToGet.Substring(0, 2).ToUpper() == "GI")
             {
                 double TV = myStruct.Volume, isodoseLvl = 1;
