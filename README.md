@@ -17,13 +17,12 @@ If you like and use Dose Hunter, do not hesitate to tell us. Moreover please add
 
 ## Authors
 
-**[Luc Simon](https://github.com/uhqd/)<sup>1,2</sup>, [François-Xavier Arnaud](https://github.com/fxarnaud/)<sup>2</sup>, [Bradley Beeksma](https://github.com/BradBeeksma)<sup>3</sup>, [Killian Lacaze](https://github.com/lacazek), Farzam Fayah**
+**[Luc Simon](https://github.com/uhqd/)<sup>1</sup>, [François-Xavier Arnaud](https://github.com/fxarnaud/)<sup>1</sup>, [Bradley Beeksma](https://github.com/BradBeeksma)<sup>2</sup>, [Killian Lacaze](https://github.com/lacazek), [Farzam Fayah](https://github.com/Farzam07)<sup>1</sup>**
 
-(1)[CRCT](https://www.crct-inserm.fr/), Toulouse, France
 
-(2)[IUCT-Oncopole](https://www.iuct-oncopole.fr/), Toulouse, France
+(1)[IUCT-Oncopole](https://www.iuct-oncopole.fr/), Toulouse, France
 
-(3)[Calvary Mater Newcastle](https://www.calvarycare.org.au/public-hospital-mater-newcastle/), New Castle, Australia
+(2)[Calvary Mater Newcastle](https://www.calvarycare.org.au/public-hospital-mater-newcastle/), New Castle, Australia
 
 
 - L. Simon: 90% of the code (input, output, etc.)
