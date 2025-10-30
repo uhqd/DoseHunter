@@ -1,6 +1,18 @@
 # HOW TO FILTER YOUR PLAN
 
-# DO NO MODIFY THIS FILE EXCEPT THE PART AFTER THE ":"
+# DO NO MODIFY THIS FILE EXCEPT THE PART OF THE LINES AFTER THE ":"
+
+# keep the COURSE only if the ID contains a string? If "yes", courses will be kept only if they contain the string (case unsensitive)
+Course name must contain a string:yes:C1:C2
+
+# Exclude the COURSE if the ID  contains a string? If "yes", course will be excluded only if they contain the string (case unsensitive)
+Course name must not contain a string:no:PDIP:C1:OCTA
+
+# keep the plan only if the ID contains a string? If "yes", plans will be kept only if they contain the string (case unsensitive)
+Plan name must contain a string:yes:test:RA:tutu
+
+# Exclude the plan if the ID contains  a string? If "yes", plans will refused if they contain the string (case unsensitive)
+Exclude if plan name contains:yes:CQ:PDIP:Octa
 
 # keep only the plans with a total dose > to a value
 Min Total Dose (Gy):10
@@ -29,18 +41,11 @@ Named plan:yes
 # Unnamed plans? If "no", plans with no name will be excluded. 
 Unnamed plan:yes
 
-# keep it if it contains a string? If "yes", plans will be kept only if they contain the string 
-Plan name must contain a string:no:ff:RA:tutu
-
-# Exclude it if it contains a string? If "yes", plans will refused if they contain the string 
-Exclude if plan name contains:yes:CQ:PDIP:Octa
-
 # Explore Sum plans ?  if no, sum plans are ignored, yes to explore them
 Explore Sumplans:no
 
 # Explore Uncertainty plans ?  if no, uncertainty plans are ignored, yes to explore them. Warning: it slows the execution 
-Explore uncertainty:no
+# Deprecated : doesn t work with Aria V18.0 and stand alone script.
+Explore uncertainty:yes
 
-# keep the COURSE it if it contains a string? If "yes", course will be kept only if they contain the string 
-Course name must contain a string:yes:KL
 

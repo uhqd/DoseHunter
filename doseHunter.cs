@@ -8,21 +8,26 @@ log.txt: main information about the execution
 data.csv: all collected data
 
  */
+using Microsoft.Win32;
 using System;
-using System.Text.RegularExpressions;
-using System.Linq;
-using System.Text;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Diagnostics;
+using System.IO;
+using System.IO.Packaging;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
+using System.Runtime.Remoting.Contexts;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Windows;
+using System.Windows.Controls;
 using VMS.TPS.Common.Model.API;
 using VMS.TPS.Common.Model.Types;
-using System.Threading;
-using System.IO;
-using System.Linq.Expressions;
-using System.Windows.Controls;
 using static VMS.TPS.Program;
-using System.IO.Packaging;
-using System.Diagnostics;
-using System.Reflection;
 
 namespace VMS.TPS
 {
@@ -31,7 +36,7 @@ namespace VMS.TPS
         #region Calculate DVH 
         public class DVH
         {
-            public DVH() {; }
+            public DVH() { }
             #region CalculeDvh
             internal DVHData CalculateDvh(PlanUncertainty uncert_plan, Structure structure, string volume_representation) // Function de generate DVHData variable
             {
@@ -61,7 +66,7 @@ namespace VMS.TPS
                 List<(double, double)> AverageDVH = new List<(double, double)>();
                 List<(double, double)> DvhDiff = new List<(double, double)>();
 
-              
+
 
                 #region Mean, Median, Min et Max
                 if (Value.ToUpper() == "MEAN") // HDV cumule
@@ -69,8 +74,8 @@ namespace VMS.TPS
                     double Volcc = 0;
                     for (int i = dvh_table.Count - 1; i > 0; i--)
                     {
-                        Volcc = (1 - ((dvh_table[i].Item2/100) * StructVol)) - (1 - ((dvh_table[i-1].Item2/ 100) * StructVol));
-                        DvhDiff.Add((dvh_table[i].Item1,Volcc));
+                        Volcc = (1 - ((dvh_table[i].Item2 / 100) * StructVol)) - (1 - ((dvh_table[i - 1].Item2 / 100) * StructVol));
+                        DvhDiff.Add((dvh_table[i].Item1, Volcc));
                     }
                     closestVolume = DvhDiff.Sum(x => x.Item1 * x.Item2) / StructVol;
                     return closestVolume;
@@ -183,7 +188,7 @@ namespace VMS.TPS
         {
             try
             {
-                using (Application app = Application.CreateApplication())
+                using (VMS.TPS.Common.Model.API.Application app = VMS.TPS.Common.Model.API.Application.CreateApplication())
                 {
                     Execute(app);
                 }
@@ -197,7 +202,7 @@ namespace VMS.TPS
         #endregion
 
         #region EXECUTE PROGRAM, THE REAL MAIN
-        static void Execute(Application app)
+        static void Execute(VMS.TPS.Common.Model.API.Application app)
         {
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -221,6 +226,7 @@ namespace VMS.TPS
             string[] stringToContainToBeKept = null;
             string[] stringinCourseToContainToBeKept = null;
             string[] stringToContainToBeExcluded = null;
+            string[] stringinCourseToContainToBeExclude = null;
             bool isADoublon = false;
             int verbose;
             //verbose = 9;
@@ -243,8 +249,12 @@ namespace VMS.TPS
             bool keepNamedPlan, keepUnamedPlan, keepRefusedPlan, keepRetiredPlan;
             bool keepIfPlanNameContainAstring, excludeIfPlannedNameContainAString;
             bool keepIfCourseNameContainAstring;
+            double MU, MI;
+            bool excludeIfCourseNameContainAstring;
+            bool foundOneStruct;
+            StructureSet ss;
             bool exploreSumPlan;
-            bool exploreUP;
+            //bool exploreUP;
             #endregion
 
             #region READ THE ID FILE
@@ -325,8 +335,11 @@ namespace VMS.TPS
             keepIfPlanNameContainAstring = false;
             excludeIfPlannedNameContainAString = false;
             exploreSumPlan = false;
-            exploreUP = false;
+            //exploreUP = false;
             keepIfCourseNameContainAstring = false;
+
+            excludeIfCourseNameContainAstring = false;
+
 
             if (!File.Exists(planfilterfilename))
             {
@@ -452,6 +465,7 @@ namespace VMS.TPS
                                 exploreSumPlan = false;
                             }
                         }
+                        /* Deprecated : doesnt work with current version of ARIA (18) and stand alone
                         if (filterTags[0] == "Explore uncertainty")
                         {
                             if (filterTags[1].ToLower() == "yes")
@@ -463,7 +477,7 @@ namespace VMS.TPS
                                 exploreUP = false;
                             }
                         }
-
+                        */
                         if (filterTags[0] == "Course name must contain a string")
                         {
                             if (filterTags[1].ToLower() == "yes")
@@ -477,25 +491,41 @@ namespace VMS.TPS
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
 
+                        if (filterTags[0] == "Course name must not contain a string")
+                        {
+                            if (filterTags[1].ToLower() == "yes")
+                            {
+                                excludeIfCourseNameContainAstring = true;
+                                stringinCourseToContainToBeExclude = filterTags;
+                            }
+                            else if (filterTags[1].ToLower() == "no")
+                                excludeIfCourseNameContainAstring = false;
+                            else
+                                Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
+                        }
+
                     }
                 }
                 srf.Close();
             }
 
 
-            #region RECAP FILTERS
-            Console.WriteLine("\r\n\r\nPlans filters. The following filters will be used to select the plans:");
-            Console.WriteLine("Total dose between {0:0.00} and {1:0.00} Gy", minTotalDose, maxTotalDose);
-            Console.WriteLine("Keep planning approved plans?\t{0}", keepPAapprovedPlan);
-            Console.WriteLine("Keep treatment approved plans?\t{0}", keepTAapprovedPlan);
-            Console.WriteLine("Keep retired plans?\t{0}", keepRetiredPlan);
-            Console.WriteLine("Keep refused plans?\t{0}", keepRefusedPlan);
-            Console.WriteLine("Keep unapproved plans?\t{0}", keepUnapprovedPlan);
-            Console.WriteLine("Keep named plans?\t{0}", keepNamedPlan);
-            Console.WriteLine("Keep unamed plans?\t{0}", keepUnamedPlan);
-            Console.WriteLine("Keep plans containing a particular string?\t{0}", keepIfPlanNameContainAstring);
-            Console.WriteLine("Explore Sum plans?\t{0}", exploreSumPlan);
+            #region RECAP FILTERS MESSAGE
+            Console.WriteLine("\r\n\r\nPlans filters. The following filters will be used to select the plans:\n");
 
+            Console.WriteLine("Keep only the courses whose ID contains a particular string?\t{0}", keepIfCourseNameContainAstring);
+            if (keepIfCourseNameContainAstring)
+                for (int i = 2; i < stringinCourseToContainToBeKept.Length; i++)
+                {
+                    Console.WriteLine(" keep the course if ID contains: '{0}'", stringinCourseToContainToBeKept[i]);
+                }
+            Console.WriteLine("Exclude courses whose ID contains a particular string?\t{0}", excludeIfCourseNameContainAstring);
+            if (excludeIfCourseNameContainAstring)
+                for (int i = 2; i < stringinCourseToContainToBeExclude.Length; i++)
+                {
+                    Console.WriteLine(" exclude the course if ID contains: '{0}'", stringinCourseToContainToBeExclude[i]);
+                }
+            Console.WriteLine("Keep only the plans whose ID contains a particular string?\t{0}", keepIfPlanNameContainAstring);
             if (keepIfPlanNameContainAstring)
                 for (int i = 2; i < stringToContainToBeKept.Length; i++)
                 {
@@ -507,6 +537,23 @@ namespace VMS.TPS
                 {
                     Console.WriteLine(" exclude the plan if planID contains: '{0}'", stringToContainToBeExcluded[i]);
                 }
+            Console.WriteLine("Total dose must be between {0:0.00} and {1:0.00} Gy", minTotalDose, maxTotalDose);
+            Console.WriteLine("Keep planning approved plans?\t{0}", keepPAapprovedPlan);
+            Console.WriteLine("Keep treatment approved plans?\t{0}", keepTAapprovedPlan);
+            Console.WriteLine("Keep retired plans?\t{0}", keepRetiredPlan);
+            Console.WriteLine("Keep refused plans?\t{0}", keepRefusedPlan);
+            Console.WriteLine("Keep unapproved plans?\t{0}", keepUnapprovedPlan);
+            Console.WriteLine("Keep named plans?\t{0}", keepNamedPlan);
+            Console.WriteLine("Keep unamed plans?\t{0}", keepUnamedPlan);
+
+            Console.WriteLine("Explore Sum plans?\t{0}", exploreSumPlan);
+          //  Console.WriteLine("Explore Uncertainties plans?\t{0}", exploreUP);
+
+
+
+
+
+
             Console.WriteLine("\r\n\r\n\r\n");
             #endregion
 
@@ -650,20 +697,46 @@ namespace VMS.TPS
                 #region TEST THE COURSE
                 foreach (Course course in p.Courses) // loop on the courses
                 {
+                    Console.WriteLine(" Course: " + course.Id);
+                    swLogFile.WriteLine(" Course: " + course.Id);
+
                     if (keepIfCourseNameContainAstring)
                     {
                         keepThisCourse = 0;
                         for (int i = 2; i < stringinCourseToContainToBeKept.Length; i++)
                         {
-                            if (course.Id.Contains(stringinCourseToContainToBeKept[i]))
+                            if (course.Id.ToUpper().Contains(stringinCourseToContainToBeKept[i].ToUpper()))
                                 keepThisCourse = 1;
                         }
                         if (keepThisCourse == 0)
                         {
-                            Console.WriteLine("         refused: course ID ({0}) does not contain one of the required strings", course.Id);
-                            swLogFile.WriteLine("         refused: course ID ({0}) does not contain one of the required strings", course.Id);
+                            Console.Write("         refused: course ID ({0}) does not contain one of the required strings\n", course.Id);
+                            swLogFile.Write("         refused: course ID ({0}) does not contain one of the required strings\n", course.Id);
+                            continue; // next course
+
                         }
                     }
+
+
+
+
+                    if (excludeIfCourseNameContainAstring)
+                    {
+
+                        for (int i = 2; i < stringinCourseToContainToBeExclude.Length; i++)
+                        {
+                            if (course.Id.ToUpper().Contains(stringinCourseToContainToBeExclude[i].ToUpper()))
+                                keepThisCourse = 0;
+                        }
+                        if (keepThisCourse == 0)
+                        {
+                            Console.WriteLine("         refused: course ID ({0}) does  contain one of the required strings", course.Id);
+                            swLogFile.WriteLine("         refused: course ID ({0}) does  contain one of the required strings", course.Id);
+                            continue; // next course
+                        }
+                    }
+
+
                     #endregion
 
                     #region LOOP EVERY PLAN
@@ -677,9 +750,8 @@ namespace VMS.TPS
                         }
                         #endregion
 
-                        keepThisPlan = 1;
-                        if (keepThisCourse == 0)
-                            keepThisPlan = 0;
+
+
                         totalNumberOfPlans++;
                         numberOfPlansForThisPatient++;
                         Console.WriteLine("  Plan: {0} (course: {1})", plan.Id, course.Id); // Verbose      
@@ -697,140 +769,139 @@ namespace VMS.TPS
                         {
                             Console.WriteLine("         refused: THE PLAN HAS NO BEAM");
                             swLogFile.WriteLine("         refused: THE PLAN HAS NO BEAM ");
-                            keepThisPlan = 0;
+                            continue; // next plan
+
                         }
                         #endregion
                         #region EXCLUDE ALL PLANS WITH NO VALID DOSE
-                        if (keepThisPlan == 1)
+
+                        if (plan.IsDoseValid == false)
                         {
-                            if (plan.IsDoseValid == false)
-                            {
-                                Console.WriteLine("         refused: THE PLAN HAS NO VALID DOSE");
-                                swLogFile.WriteLine("         refused: THE PLAN HAS NO NO VALID DOSE ");
-                                keepThisPlan = 0;
-                            }
+                            Console.WriteLine("         refused: THE PLAN HAS NO VALID DOSE");
+                            swLogFile.WriteLine("         refused: THE PLAN HAS NO NO VALID DOSE ");
+                            continue; // next plan
                         }
+
                         #endregion
 
 
                         #region TEST IF THE PLAN HAS A NAME
 
-                        if (keepThisPlan == 1)
+
+                        if (keepNamedPlan == false) // dont keep  plans with a name
                         {
-                            if (keepNamedPlan == false) // dont keep  plans with a name
+                            if (plan.Name != "")  // if  name exist
                             {
-                                if (plan.Name != "")  // if  name exist
-                                {
-                                    keepThisPlan = keepThisPlan * 0;
-                                    Console.WriteLine("         refused: THE PLAN HAS A NAME");
-                                    swLogFile.WriteLine("         refused: THE PLAN HAS A NAME ");
-                                }
-                            }
-                            if (keepUnamedPlan == false) // dont keep plans with no name
-                            {
-                                if (plan.Name == "")  // if  no name 
-                                {
-                                    keepThisPlan = keepThisPlan * 0;
-                                    Console.WriteLine("         refused: THE PLAN HAS NO NAME");
-                                    swLogFile.WriteLine("         refused: THE PLAN HAS NO NAME ");
-                                }
+
+                                Console.WriteLine("         refused: THE PLAN HAS A NAME");
+                                swLogFile.WriteLine("         refused: THE PLAN HAS A NAME ");
+                                continue; // next plan
                             }
                         }
+                        if (keepUnamedPlan == false) // dont keep plans with no name
+                        {
+                            if (plan.Name == "")  // if  no name 
+                            {
+
+                                Console.WriteLine("         refused: THE PLAN HAS NO NAME");
+                                swLogFile.WriteLine("         refused: THE PLAN HAS NO NAME ");
+                                continue; // next plan
+                            }
+                        }
+
                         #endregion
                         #region TEST THE PLAN APPROBATION
-                        if (keepThisPlan == 1)
-                            if (keepTAapprovedPlan == false) // dont keep  Treat approved plans
+                        if (keepTAapprovedPlan == false) // dont keep  Treat approved plans
+                        {
+                            if (plan.ApprovalStatus == PlanSetupApprovalStatus.TreatmentApproved)  // if  treat approve
                             {
-                                if (plan.ApprovalStatus == PlanSetupApprovalStatus.TreatmentApproved)  // if  treat approve
-                                {
 
-                                    keepThisPlan = keepThisPlan * 0;
-                                    Console.WriteLine("         refused: THE PLAN IS TREAT APPROVED");
-                                    swLogFile.WriteLine("         refused: THE PLAN IS TREAT APPROVED");
-                                }
+
+                                Console.WriteLine("         refused: THE PLAN IS TREAT APPROVED");
+                                swLogFile.WriteLine("         refused: THE PLAN IS TREAT APPROVED");
+                                continue;
                             }
-                        if (keepThisPlan == 1)
-                            if (keepPAapprovedPlan == false) // dont keep  planning approved plans
+                        }
+                        if (keepPAapprovedPlan == false) // dont keep  planning approved plans
+                        {
+                            if (plan.ApprovalStatus == PlanSetupApprovalStatus.PlanningApproved)  // if  plan approve
                             {
-                                if (plan.ApprovalStatus == PlanSetupApprovalStatus.PlanningApproved)  // if  plan approve
-                                {
-                                    keepThisPlan = keepThisPlan * 0;
-                                    Console.WriteLine("         refused: THE PLAN IS PLAN APPROVED");
-                                    swLogFile.WriteLine("         refused: THE PLAN IS PLAN APPROVED");
-                                }
+                                Console.WriteLine("         refused: THE PLAN IS PLAN APPROVED");
+                                swLogFile.WriteLine("         refused: THE PLAN IS PLAN APPROVED");
+                                continue;
                             }
-                        if (keepThisPlan == 1)
-                            if (keepUnapprovedPlan == false) // dont keep   unapproved plans
+                        }
+                        if (keepUnapprovedPlan == false) // dont keep   unapproved plans
+                        {
+                            if (plan.ApprovalStatus == PlanSetupApprovalStatus.UnApproved)  // if  plan approve
                             {
-                                if (plan.ApprovalStatus == PlanSetupApprovalStatus.UnApproved)  // if  plan approve
-                                {
-                                    keepThisPlan = keepThisPlan * 0;
-                                    Console.WriteLine("         refused: THE PLAN IS UNAPPROVED");
-                                    swLogFile.WriteLine("         refused: THE PLAN IS UNAPPROVED");
-                                }
+                                Console.WriteLine("         refused: THE PLAN IS UNAPPROVED");
+                                swLogFile.WriteLine("         refused: THE PLAN IS UNAPPROVED");
+                                continue;
                             }
-                        if (keepThisPlan == 1)
-                            if (keepRefusedPlan == false) // dont keep refused plans
+                        }
+                        if (keepRefusedPlan == false) // dont keep refused plans
+                        {
+                            if (plan.ApprovalStatus == PlanSetupApprovalStatus.Rejected)  // if  plan rejected
                             {
-                                if (plan.ApprovalStatus == PlanSetupApprovalStatus.Rejected)  // if  plan rejected
-                                {
-                                    keepThisPlan = keepThisPlan * 0;
-                                    Console.WriteLine("         refused: THE PLAN STATUS IS REFUSED");
-                                    swLogFile.WriteLine("         refused: THE PLAN STATUS IS REFUSED");
-                                }
+                                Console.WriteLine("         refused: THE PLAN STATUS IS REFUSED");
+                                swLogFile.WriteLine("         refused: THE PLAN STATUS IS REFUSED");
+                                continue;
+
                             }
-                        if (keepThisPlan == 1)
-                            if (keepRetiredPlan == false) // dont keep retired plans
+                        }
+                        if (keepRetiredPlan == false) // dont keep retired plans
+                        {
+                            if (plan.ApprovalStatus == PlanSetupApprovalStatus.Retired)  // if  plan retired
                             {
-                                if (plan.ApprovalStatus == PlanSetupApprovalStatus.Retired)  // if  plan retired
-                                {
-                                    keepThisPlan = keepThisPlan * 0;
-                                    Console.WriteLine("         refused: THE PLAN STATUS IS RETIRED");
-                                    swLogFile.WriteLine("         refused: THE PLAN STATUS IS RETIRED");
-                                }
+
+                                Console.WriteLine("         refused: THE PLAN STATUS IS RETIRED");
+                                swLogFile.WriteLine("         refused: THE PLAN STATUS IS RETIRED");
+                                continue;
                             }
+                        }
 
                         #endregion
                         #region TEST IF TOTAL DOSE BETWEEN MIN AND MAX
-                        if (keepThisPlan == 1)
-                            if (plan.TotalDose.Dose < minTotalDose || plan.TotalDose.Dose > maxTotalDose)
-                            {
-                                keepThisPlan = keepThisPlan * 0;
-                                Console.WriteLine("         refused: Total dose ({0:0.00} Gy) is not between {1} and {2} Gy", plan.TotalDose.Dose, minTotalDose, maxTotalDose);
-                                swLogFile.WriteLine("         refused: Total dose ({0:0.00} Gy) is not between {1} and {2} Gy", plan.TotalDose.Dose, minTotalDose, maxTotalDose);
-                            }
+                        if (plan.TotalDose.Dose < minTotalDose || plan.TotalDose.Dose > maxTotalDose)
+                        {
+
+                            Console.WriteLine("         refused: Total dose ({0:0.00} Gy) is not between {1} and {2} Gy", plan.TotalDose.Dose, minTotalDose, maxTotalDose);
+                            swLogFile.WriteLine("         refused: Total dose ({0:0.00} Gy) is not between {1} and {2} Gy", plan.TotalDose.Dose, minTotalDose, maxTotalDose);
+                            continue;
+                        }
                         #endregion
 
                         #region TEST IF PLAN CONTAINS OR DOES NOT CONTAIN SOME CHOSEN STRINGS
-                        if (keepThisPlan == 1) // TEST ALL STRINGS TO KEEP PLANS
-                            if (keepIfPlanNameContainAstring)
+                        if (keepIfPlanNameContainAstring)
+                        {
+                            keepThisPlan = 0;
+                            for (int i = 2; i < stringToContainToBeKept.Length; i++)
                             {
-                                keepThisPlan = 0;
-                                for (int i = 2; i < stringToContainToBeKept.Length; i++)
-                                {
-                                    if (plan.Id.Contains(stringToContainToBeKept[i]))
-                                        keepThisPlan = 1;
-                                }
-                                if (keepThisPlan == 0)
-                                {
-                                    Console.WriteLine("         refused: plan ID ({0}) does not contain one of the required strings", plan.Id);
-                                    swLogFile.WriteLine("         refused: plan ID ({0}) does not contain one of the required strings", plan.Id);
-                                }
+                                if (plan.Id.ToUpper().Contains(stringToContainToBeKept[i].ToUpper()))
+                                    keepThisPlan = 1;
                             }
+                            if (keepThisPlan == 0)
+                            {
+                                Console.WriteLine("         refused: plan ID ({0}) does not contain one of the required strings", plan.Id);
+                                swLogFile.WriteLine("         refused: plan ID ({0}) does not contain one of the required strings", plan.Id);
+                                continue;
+                            }
+                        }
 
-                        if (keepThisPlan == 1)  // TEST ALL STINGS TO EXCLUDE PLANS
-                            if (excludeIfPlannedNameContainAString)
+                        if (excludeIfPlannedNameContainAString)
+                        {
+                            for (int i = 2; i < stringToContainToBeExcluded.Length; i++)
                             {
-                                for (int i = 2; i < stringToContainToBeExcluded.Length; i++)
+                                if (plan.Id.ToUpper().Contains(stringToContainToBeExcluded[i].ToUpper()))
                                 {
-                                    if (plan.Id.Contains(stringToContainToBeExcluded[i]))
-                                    {
-                                        keepThisPlan = keepThisPlan * 0;
-                                        Console.WriteLine("         refused: plan ID ({0}) does contain the strings {1}", plan.Id, stringToContainToBeExcluded[i]);
-                                        swLogFile.WriteLine("         refused: plan ID ({0}) does contain the strings {1}", plan.Id, stringToContainToBeExcluded[i]);
-                                    }
+
+                                    Console.WriteLine("         refused: plan ID ({0}) does contain the strings {1}", plan.Id, stringToContainToBeExcluded[i]);
+                                    swLogFile.WriteLine("         refused: plan ID ({0}) does contain the strings {1}", plan.Id, stringToContainToBeExcluded[i]);
+                                    continue;
                                 }
                             }
+                        }
 
                         #endregion
 
@@ -844,213 +915,114 @@ namespace VMS.TPS
                             Console.ReadLine();
                         }
                         #endregion
+
+
+
+
                         #region Uncertainty plan
-                        // uncertainties analysis must be done before plan analysis. Bug in ESAPI15. 
-                        // see reddit thread:
-                        // https://www.reddit.com/r/esapi/comments/13ok5g2/plan_uncertainty_dvh_bug/
-                        if (exploreUP)
-                        {
-                            foreach (var pu in plan.PlanUncertainties)
-                            {
-                                if (pu != null)
-                                {
-                                    double MU = 0;
-
-                                    foreach (Beam beam in plan.Beams)
-                                    {
-                                        if (!beam.IsSetupField)
-                                            MU = MU + Math.Round(beam.Meterset.Value, 2);
-                                    }
-                                    //MI
-                                    var MI = Math.Round(MU / (plan.DosePerFraction.Dose), 3);
-                                    DVH MyDVH = new DVH();
-
-                                    swData.Write("{0};{1};{2} ({11});{3};{4};{5};{6};{7};{8};{9};{10}",
-                                    p.Id, course.Id, pu.Id, plan.CreationDateTime, plan.CreationUserName, plan.TotalDose.ValueAsString, plan.DosePerFraction.ValueAsString,
-                                    plan.NumberOfFractions, MU, MI, Math.Round(plan.PlanNormalizationValue, 1), plan.Id);
-
-                                    foreach (string myString in list_struct) // loop on lines of user dose index (1 by struct)
-                                    {
-                                        // get separated elements of a line (separator is a ,)
-                                        lineElements = myString.Split(',');
-                                        // get the different possible names of the structure (separate by a ;)
-                                        string[] myFirstName = lineElements[0].Split(';');
-
-                                        StructureSet ss = plan.StructureSet;
-                                        bool foundOneStruct = false;
-                                        foreach (string myDiffStrucNames in myFirstName) // loop on the different names of a same struct
-                                        {
-                                            if (foundOneStruct == false)
-                                            {
-                                                struct1 = ss.Structures.FirstOrDefault(x => x.Id.ToLower() == myDiffStrucNames.ToLower());
-                                                if (struct1 != null) // does the stucture exist?
-                                                {
-                                                    if (!struct1.IsEmpty) // Is it empty?
-                                                    {
-                                                        foundOneStruct = true;
-                                                        try
-                                                        {
-                                                            DVHData DVH_uncert = MyDVH.CalculateDvh(pu, struct1, "relative");
-                                                            List<(double, double)> dvhPU = MyDVH.CurveData2Table(DVH_uncert);
-
-                                                            if (!dvhPU.Equals(null))
-                                                            {
-
-                                                                swLogFile.WriteLine("    {0} found in {1}", myDiffStrucNames, pu.Id); // verbose
-                                                                if (verbose > 0)
-                                                                    Console.WriteLine("    {0} found in {1} ({2})", myDiffStrucNames, pu.Id, plan.Id);
-                                                                foreach (string dataToGet in lineElements.Skip(1)) // loop on index
-                                                                {
-                                                                    if (verbose > 5)
-                                                                        Console.WriteLine(" Gimme the {0} for {1}\r\n", dataToGet, struct1.Id);
-
-                                                                    double thisValueImLookingFor = -99.999;
-
-                                                                    thisValueImLookingFor = MyDVH.extract_VolumeAtDose(dvhPU, dataToGet, plan, struct1);
-                                                                    if (thisValueImLookingFor != -1.0)
-                                                                    {
-                                                                        swLogFile.WriteLine("  {0} for {1} is {2:0.00}", dataToGet, struct1.Id, thisValueImLookingFor);
-                                                                        swData.Write(";{0:0.00}", Math.Round(thisValueImLookingFor, 5));
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        swData.Write(";"); // if data impossible to extract
-                                                                    }
-                                                                }
-                                                                dvhPU.Clear();
-                                                            }
-                                                            else
-                                                            {
-                                                                Console.WriteLine("DVH is empty");
-                                                                swLogFile.WriteLine("DVH is empty");
-                                                            }
-                                                        }
-
-                                                        catch (Exception ex)
-                                                        {
-                                                            swLogFile.WriteLine(" Uncertainty plan not found; exception  {0} {1} plan", ex.Message, pu.Id);
-                                                            Console.WriteLine(" Uncertainty plan not found; exception  {0} pour le plan {1}", ex, pu.Id);
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        if (foundOneStruct == false)
-                                        {
-                                            Console.WriteLine("    {0} not found ********", myFirstName[0]);
-                                            swLogFile.WriteLine("    {0} not found ********", myFirstName[0]);
-                                            foreach (string skippedData in lineElements.Skip(1))
-                                                swData.Write(";");
-                                            //swData.Write(",");
-                                        }
-                                    }
-                                }
-                                swData.WriteLine(";");
-                            }
-                        }
+                        // uncertainties analysis can not be done with ARIA 18 stand alone version
                         #endregion
+
                         #region GET THE DATA 
 
-                        if (keepThisPlan == 1)
+
+                        numberOfAcceptedPlans++;
+                        numberOfAcceptedPlansForThisPatient++;
+
+                        if (foundOneAcceptedPlan == 0)
                         {
-                            numberOfAcceptedPlans++;
-                            numberOfAcceptedPlansForThisPatient++;
+                            nPatientWithAnAcceptedPlan++;
+                            foundOneAcceptedPlan = 1;
+                        }
+                        else
+                        {
+                            Console.WriteLine("   THIS PATIENT HAS MORE THAN ONE ACCEPTED PLAN !!"); // verbose
+                            swLogFile.WriteLine("   THIS PATIENT HAS MORE THAN ONE ACCEPTED PLAN !!"); // verbose
 
-                            if (foundOneAcceptedPlan == 0)
+                        }
+
+                        if (verbose > 0)
+                        {
+                            Console.WriteLine("   Total dose =  {0}  ", plan.TotalDose); // verbose
+                            swLogFile.WriteLine("   Total dose =  {0}  ", plan.TotalDose); // verbose
+                        }
+                        //Total MU
+                        MU = 0;
+                        foreach (Beam beam in plan.Beams)
+                        {
+                            if (!beam.IsSetupField)
+                                MU = MU + Math.Round(beam.Meterset.Value, 2);
+                        }
+                        //MI
+                        MI = Math.Round(MU / (plan.DosePerFraction.Dose), 3);
+
+                        // write first 11 columns
+                        swData.Write("{0};{1};{2};{3};{4};{5};{6};{7};{8};{9};{10}",
+                            p.Id, course.Id, plan.Id, plan.CreationDateTime, plan.CreationUserName, plan.TotalDose.ValueAsString, plan.DosePerFraction.ValueAsString,
+                            plan.NumberOfFractions, MU, MI, Math.Round(plan.PlanNormalizationValue, 1));
+
+                        ss = plan.StructureSet;
+                        foundOneStruct = false;
+                        foreach (string myString in list_struct) // loop on lines of user dose index (1 by struct)
+                        {
+                            // get separated elements of a line (separator is a ,)
+                            lineElements = myString.Split(',');
+                            // get the different possible names of the structure (separate by a ;)
+                            string[] myFirstName = lineElements[0].Split(';');
+
+                            foundOneStruct = false;
+                            foreach (string myDiffStrucNames in myFirstName) // loop on the different names of a same struct
                             {
-                                nPatientWithAnAcceptedPlan++;
-                                foundOneAcceptedPlan = 1;
-                            }
-                            else
-                            {
-                                Console.WriteLine("   THIS PATIENT HAS MORE THAN ONE ACCEPTED PLAN !!"); // verbose
-                                swLogFile.WriteLine("   THIS PATIENT HAS MORE THAN ONE ACCEPTED PLAN !!"); // verbose
-
-                            }
-
-                            if (verbose > 0)
-                            {
-                                Console.WriteLine("   Total dose =  {0}  ", plan.TotalDose); // verbose
-                                swLogFile.WriteLine("   Total dose =  {0}  ", plan.TotalDose); // verbose
-                            }
-                            //Total MU
-                            double MU = 0;
-                            foreach (Beam beam in plan.Beams)
-                            {
-                                if (!beam.IsSetupField)
-                                    MU = MU + Math.Round(beam.Meterset.Value, 2);
-                            }
-                            //MI
-                            var MI = Math.Round(MU / (plan.DosePerFraction.Dose), 3);
-
-                            // write first 11 columns
-                            swData.Write("{0};{1};{2};{3};{4};{5};{6};{7};{8};{9};{10}",
-                                p.Id, course.Id, plan.Id, plan.CreationDateTime, plan.CreationUserName, plan.TotalDose.ValueAsString, plan.DosePerFraction.ValueAsString,
-                                plan.NumberOfFractions, MU, MI, Math.Round(plan.PlanNormalizationValue, 1));
-
-                            StructureSet ss = plan.StructureSet;
-                            bool foundOneStruct = false;
-                            foreach (string myString in list_struct) // loop on lines of user dose index (1 by struct)
-                            {
-                                // get separated elements of a line (separator is a ,)
-                                lineElements = myString.Split(',');
-                                // get the different possible names of the structure (separate by a ;)
-                                string[] myFirstName = lineElements[0].Split(';');
-
-                                foundOneStruct = false;
-                                foreach (string myDiffStrucNames in myFirstName) // loop on the different names of a same struct
+                                if (foundOneStruct == false)
                                 {
-                                    if (foundOneStruct == false)
+                                    struct1 = ss.Structures.FirstOrDefault(x => x.Id.ToLower() == myDiffStrucNames.ToLower());
+                                    if (struct1 != null) // does the stucture exist?
                                     {
-                                        struct1 = ss.Structures.FirstOrDefault(x => x.Id.ToLower() == myDiffStrucNames.ToLower());
-                                        if (struct1 != null) // does the stucture exist?
+                                        if (!struct1.IsEmpty) // Is it empty?
                                         {
-                                            if (!struct1.IsEmpty) // Is it empty?
+                                            foundOneStruct = true;
+                                            DVHData dvh = plan.GetDVHCumulativeData(struct1, DoseValuePresentation.Absolute, VolumePresentation.Relative, 0.1);
+
+                                            swLogFile.WriteLine("    {0} found", myDiffStrucNames); // verbose
+                                            if (verbose > 0)
+                                                Console.WriteLine("    {0} found", myDiffStrucNames);
+                                            foreach (string dataToGet in lineElements.Skip(1)) // loop on index
                                             {
-                                                foundOneStruct = true;
-                                                DVHData dvh = plan.GetDVHCumulativeData(struct1, DoseValuePresentation.Absolute, VolumePresentation.Relative, 0.1);
+                                                if (verbose > 5)
+                                                    Console.WriteLine(" Gimme the {0} for {1}\r\n", dataToGet, struct1.Id);
 
-                                                swLogFile.WriteLine("    {0} found", myDiffStrucNames); // verbose
-                                                if (verbose > 0)
-                                                    Console.WriteLine("    {0} found", myDiffStrucNames);
-                                                foreach (string dataToGet in lineElements.Skip(1)) // loop on index
+                                                double thisValueImLookingFor = -99.999;
+
+                                                thisValueImLookingFor = gimmeThatBro(dataToGet, struct1, plan, dvh);
+
+                                                if (thisValueImLookingFor != -1.0)
                                                 {
-                                                    if (verbose > 5)
-                                                        Console.WriteLine(" Gimme the {0} for {1}\r\n", dataToGet, struct1.Id);
-
-                                                    double thisValueImLookingFor = -99.999;
-
-                                                    thisValueImLookingFor = gimmeThatBro(dataToGet, struct1, plan, dvh);
-
-                                                    if (thisValueImLookingFor != -1.0)
-                                                    {
-                                                        swLogFile.WriteLine("  {0} for {1} is {2:0.00}", dataToGet, struct1.Id, thisValueImLookingFor);
-                                                        swData.Write(";{0:0.00}", thisValueImLookingFor);
-                                                    }
-                                                    else
-                                                    {
-                                                        swData.Write(";"); // if data impossible to extract
-                                                    }
-                                                    //swData.Write(",{0:0.00}", thisValueImLookingFor);
+                                                    swLogFile.WriteLine("  {0} for {1} is {2:0.00}", dataToGet, struct1.Id, thisValueImLookingFor);
+                                                    swData.Write(";{0:0.00}", thisValueImLookingFor);
                                                 }
+                                                else
+                                                {
+                                                    swData.Write(";"); // if data impossible to extract
+                                                }
+                                                //swData.Write(",{0:0.00}", thisValueImLookingFor);
                                             }
                                         }
                                     }
                                 }
-
-                                if (foundOneStruct == false)
-                                {
-                                    Console.WriteLine("    {0} not found ********", myFirstName[0]);
-                                    swLogFile.WriteLine("    {0} not found ********", myFirstName[0]);
-                                    foreach (string skippedData in lineElements.Skip(1))
-                                        swData.Write(";");
-                                    //swData.Write(",");
-                                }
                             }
-                            swData.WriteLine(";");
 
+                            if (foundOneStruct == false)
+                            {
+                                Console.WriteLine("    {0} not found ********", myFirstName[0]);
+                                swLogFile.WriteLine("    {0} not found ********", myFirstName[0]);
+                                foreach (string skippedData in lineElements.Skip(1))
+                                    swData.Write(";");
+                                //swData.Write(",");
+                            }
                         }
+                        swData.WriteLine(";");
+
+
                         //swData.Write("\r\n");
 
                         #endregion
@@ -1069,12 +1041,11 @@ namespace VMS.TPS
                     if (exploreSumPlan)
                         foreach (PlanSum plan in course.PlanSums) // loop on the plans
                         {
-                            keepThisPlan = 1;
+
                             totalNumberOfPlans++;
                             numberOfPlansForThisPatient++;
 
-                            if (keepThisCourse == 0)
-                                keepThisPlan = 0;
+
                             #region VERBOSE
                             if (verbose > 5)
                             {
@@ -1092,59 +1063,59 @@ namespace VMS.TPS
 
                             #region TEST IF THE PLAN HAS A NAME
 
-                            if (keepThisPlan == 1)
+
+                            if (keepNamedPlan == false) // dont keep  plans with a name
                             {
-                                if (keepNamedPlan == false) // dont keep  plans with a name
+                                if (plan.Name != "")  // if  name exist
                                 {
-                                    if (plan.Name != "")  // if  name exist
-                                    {
-                                        keepThisPlan = keepThisPlan * 0;
-                                        Console.WriteLine("         refused: THE PLAN HAS A NAME");
-                                        swLogFile.WriteLine("         refused: THE PLAN HAS A NAME ");
-                                    }
-                                }
-                                if (keepUnamedPlan == false) // dont keep plans with no name
-                                {
-                                    if (plan.Name == "")  // if  no name 
-                                    {
-                                        keepThisPlan = keepThisPlan * 0;
-                                        Console.WriteLine("         refused: THE PLAN HAS NO NAME");
-                                        swLogFile.WriteLine("         refused: THE PLAN HAS NO NAME ");
-                                    }
+
+                                    Console.WriteLine("         refused: THE PLAN HAS A NAME");
+                                    swLogFile.WriteLine("         refused: THE PLAN HAS A NAME ");
+                                    continue; // next plan
                                 }
                             }
+                            if (keepUnamedPlan == false) // dont keep plans with no name
+                            {
+                                if (plan.Name == "")  // if  no name 
+                                {
+
+                                    Console.WriteLine("         refused: THE PLAN HAS NO NAME");
+                                    swLogFile.WriteLine("         refused: THE PLAN HAS NO NAME ");
+                                    continue; // next plan
+                                }
+                            }
+
                             #endregion
 
                             #region TEST IF PLAN CONTAINS OR DOES NOT CONTAIN SOME CHOSEN STRINGS
-                            if (keepThisPlan == 1) // TEST ALL STINGS TO KEEP PLANS
-                                if (keepIfPlanNameContainAstring)
+                            if (keepIfPlanNameContainAstring)
+                            {
+                                keepThisPlan = 0;
+                                for (int i = 2; i < stringToContainToBeKept.Length; i++)
                                 {
-                                    keepThisPlan = 0;
-                                    for (int i = 2; i < stringToContainToBeKept.Length; i++)
-                                    {
-                                        if (plan.Id.Contains(stringToContainToBeKept[i]))
-                                            keepThisPlan = 1;
-                                    }
-                                    if (keepThisPlan == 0)
-                                    {
-                                        Console.WriteLine("         refused: plan ID ({0}) does not contain one of the required strings", plan.Id);
-                                        swLogFile.WriteLine("         refused: plan ID ({0}) does not contain one of the required strings", plan.Id);
-                                    }
+                                    if (plan.Id.Contains(stringToContainToBeKept[i]))
+                                        keepThisPlan = 1;
                                 }
+                                if (keepThisPlan == 0)
+                                {
+                                    Console.WriteLine("         refused: plan ID ({0}) does not contain one of the required strings", plan.Id);
+                                    swLogFile.WriteLine("         refused: plan ID ({0}) does not contain one of the required strings", plan.Id);
+                                    continue;
+                                }
+                            }
 
-                            if (keepThisPlan == 1)  // TEST ALL STINGS TO EXCLUDE PLANS
-                                if (excludeIfPlannedNameContainAString)
+                            if (excludeIfPlannedNameContainAString)
+                            {
+                                for (int i = 2; i < stringToContainToBeExcluded.Length; i++)
                                 {
-                                    for (int i = 2; i < stringToContainToBeExcluded.Length; i++)
+                                    if (plan.Id.Contains(stringToContainToBeExcluded[i]))
                                     {
-                                        if (plan.Id.Contains(stringToContainToBeExcluded[i]))
-                                        {
-                                            keepThisPlan = keepThisPlan * 0;
-                                            Console.WriteLine("         refused: plan ID ({0}) does contain the strings {1}", plan.Id, stringToContainToBeExcluded[i]);
-                                            swLogFile.WriteLine("         refused: plan ID ({0}) does contain the strings {1}", plan.Id, stringToContainToBeExcluded[i]);
-                                        }
+                                        Console.WriteLine("         refused: plan ID ({0}) does contain the strings {1}", plan.Id, stringToContainToBeExcluded[i]);
+                                        swLogFile.WriteLine("         refused: plan ID ({0}) does contain the strings {1}", plan.Id, stringToContainToBeExcluded[i]);
+                                        continue;
                                     }
                                 }
+                            }
 
                             #endregion
 
@@ -1159,119 +1130,118 @@ namespace VMS.TPS
 
                             #region GET THE DATA 
 
-                            if (keepThisPlan == 1)
+
+                            numberOfAcceptedPlans++;
+                            numberOfAcceptedPlansForThisPatient++;
+
+                            if (foundOneAcceptedPlan == 0)
                             {
-                                numberOfAcceptedPlans++;
-                                numberOfAcceptedPlansForThisPatient++;
+                                nPatientWithAnAcceptedPlan++;
+                                foundOneAcceptedPlan = 1;
+                            }
+                            else
+                            {
+                                Console.WriteLine("   THIS PATIENT HAS MORE THAN ONE ACCEPTED PLAN !!"); // verbose
+                                swLogFile.WriteLine("   THIS PATIENT HAS MORE THAN ONE ACCEPTED PLAN !!"); // verbose
 
-                                if (foundOneAcceptedPlan == 0)
+                            }
+
+                            #region GET GENERAL VALUES FOR THE PLAN SUM: MU, MI, TOTAL DOSE
+                            MU = 0;
+                            int nTotalFractionOfSum = 0;
+                            double totalDoseOfSum = 0;
+                            double dosePerFractionOfSum = 0;
+
+                            foreach (PlanSetup IndividualPlan in plan.PlanSetups)
+                            {
+                                foreach (Beam beam in IndividualPlan.Beams)
                                 {
-                                    nPatientWithAnAcceptedPlan++;
-                                    foundOneAcceptedPlan = 1;
+                                    if (!beam.IsSetupField)
+                                        MU = MU + Math.Round(beam.Meterset.Value, 2);
                                 }
-                                else
+                                nTotalFractionOfSum = nTotalFractionOfSum + IndividualPlan.NumberOfFractions.Value;
+                                totalDoseOfSum = totalDoseOfSum + IndividualPlan.TotalDose.Dose;
+                                lastTime = Convert.ToDateTime(IndividualPlan.CreationDateTime);
+                            }
+
+                            dosePerFractionOfSum = totalDoseOfSum / nTotalFractionOfSum;
+                            MI = Math.Round(MU / dosePerFractionOfSum, 3);
+                            #endregion
+
+                            #region Write first 11 columns
+                            double cent = 100.00; //normalisation for plan sum is set to 100.00. Don't ask why
+                            swData.Write("{0};{1};{2};{3};{4};{5:0.000};{6:0.000};{7};{8};{9};{10:0.0}",
+                                p.Id, course.Id, plan.Id, lastTime, "plan_sum", totalDoseOfSum, dosePerFractionOfSum,
+                                nTotalFractionOfSum, MU, MI, cent);
+                            #endregion
+
+                            ss = plan.StructureSet;
+                            foundOneStruct = false;
+                            #region LOOP ON LINES OF THE FILE index.txt
+                            foreach (string myString in list_struct) // loop on lines of user dose index (1 by struct)
+                            {
+                                // get separated elements of a line (separator is a ,)
+                                lineElements = myString.Split(',');
+                                // get the different possible names of the structure (separate by a ;)
+                                string[] myFirstName = lineElements[0].Split(';');
+                                #region LOOP ON STRUCTURES
+                                foundOneStruct = false;
+                                foreach (string myDiffStrucNames in myFirstName) // loop on the different names of a same struct
                                 {
-                                    Console.WriteLine("   THIS PATIENT HAS MORE THAN ONE ACCEPTED PLAN !!"); // verbose
-                                    swLogFile.WriteLine("   THIS PATIENT HAS MORE THAN ONE ACCEPTED PLAN !!"); // verbose
-
-                                }
-
-                                #region GET GENERAL VALUES FOR THE PLAN SUM: MU, MI, TOTAL DOSE
-                                double MU = 0;
-                                int nTotalFractionOfSum = 0;
-                                double totalDoseOfSum = 0;
-                                double dosePerFractionOfSum = 0;
-
-                                foreach (PlanSetup IndividualPlan in plan.PlanSetups)
-                                {
-                                    foreach (Beam beam in IndividualPlan.Beams)
+                                    if (foundOneStruct == false)
                                     {
-                                        if (!beam.IsSetupField)
-                                            MU = MU + Math.Round(beam.Meterset.Value, 2);
-                                    }
-                                    nTotalFractionOfSum = nTotalFractionOfSum + IndividualPlan.NumberOfFractions.Value;
-                                    totalDoseOfSum = totalDoseOfSum + IndividualPlan.TotalDose.Dose;
-                                    lastTime = Convert.ToDateTime(IndividualPlan.CreationDateTime);
-                                }
-
-                                dosePerFractionOfSum = totalDoseOfSum / nTotalFractionOfSum;
-                                var MI = Math.Round(MU / dosePerFractionOfSum, 3);
-                                #endregion
-
-                                #region Write first 11 columns
-                                double cent = 100.00; //normalisation for plan sum is set to 100.00. Don't ask why
-                                swData.Write("{0};{1};{2};{3};{4};{5:0.000};{6:0.000};{7};{8};{9};{10:0.0}",
-                                    p.Id, course.Id, plan.Id, lastTime, "plan_sum", totalDoseOfSum, dosePerFractionOfSum,
-                                    nTotalFractionOfSum, MU, MI, cent);
-                                #endregion
-
-                                StructureSet ss = plan.StructureSet;
-                                bool foundOneStruct = false;
-                                #region LOOP ON LINES OF THE FILE index.txt
-                                foreach (string myString in list_struct) // loop on lines of user dose index (1 by struct)
-                                {
-                                    // get separated elements of a line (separator is a ,)
-                                    lineElements = myString.Split(',');
-                                    // get the different possible names of the structure (separate by a ;)
-                                    string[] myFirstName = lineElements[0].Split(';');
-                                    #region LOOP ON STRUCTURES
-                                    foundOneStruct = false;
-                                    foreach (string myDiffStrucNames in myFirstName) // loop on the different names of a same struct
-                                    {
-                                        if (foundOneStruct == false)
+                                        struct1 = ss.Structures.FirstOrDefault(x => x.Id == myDiffStrucNames);
+                                        if (struct1 != null) // does the stucture exist?
                                         {
-                                            struct1 = ss.Structures.FirstOrDefault(x => x.Id == myDiffStrucNames);
-                                            if (struct1 != null) // does the stucture exist?
+                                            if (!struct1.IsEmpty) // Is it empty?
                                             {
-                                                if (!struct1.IsEmpty) // Is it empty?
+                                                foundOneStruct = true;
+                                                DVHData dvh = plan.GetDVHCumulativeData(struct1, DoseValuePresentation.Absolute, VolumePresentation.Relative, 0.1);
+
+                                                swLogFile.WriteLine("    {0} found", myDiffStrucNames); // verbose
+                                                if (verbose > 0)
+                                                    Console.WriteLine("    {0} found", myDiffStrucNames);
+                                                #region LOOP ON INDEX
+                                                foreach (string dataToGet in lineElements.Skip(1)) // loop on index
                                                 {
-                                                    foundOneStruct = true;
-                                                    DVHData dvh = plan.GetDVHCumulativeData(struct1, DoseValuePresentation.Absolute, VolumePresentation.Relative, 0.1);
+                                                    if (verbose > 5)
+                                                        Console.WriteLine(" Gimme the {0} for {1}\r\n", dataToGet, struct1.Id);
 
-                                                    swLogFile.WriteLine("    {0} found", myDiffStrucNames); // verbose
-                                                    if (verbose > 0)
-                                                        Console.WriteLine("    {0} found", myDiffStrucNames);
-                                                    #region LOOP ON INDEX
-                                                    foreach (string dataToGet in lineElements.Skip(1)) // loop on index
+                                                    double thisValueImLookingFor = -99.999;
+
+                                                    thisValueImLookingFor = gimmeThatBroSum(dataToGet, struct1, plan, dvh);
+
+                                                    if (thisValueImLookingFor != -1.0)
                                                     {
-                                                        if (verbose > 5)
-                                                            Console.WriteLine(" Gimme the {0} for {1}\r\n", dataToGet, struct1.Id);
-
-                                                        double thisValueImLookingFor = -99.999;
-
-                                                        thisValueImLookingFor = gimmeThatBroSum(dataToGet, struct1, plan, dvh);
-
-                                                        if (thisValueImLookingFor != -1.0)
-                                                        {
-                                                            swLogFile.WriteLine("  {0} for {1} is {2:0.00}", dataToGet, struct1.Id, thisValueImLookingFor);
-                                                            swData.Write(";{0:0.00}", thisValueImLookingFor);
-                                                        }
-                                                        else
-                                                        {
-                                                            swData.Write(";"); // if data impossible to extract
-                                                        }
-
+                                                        swLogFile.WriteLine("  {0} for {1} is {2:0.00}", dataToGet, struct1.Id, thisValueImLookingFor);
+                                                        swData.Write(";{0:0.00}", thisValueImLookingFor);
                                                     }
-                                                    #endregion
+                                                    else
+                                                    {
+                                                        swData.Write(";"); // if data impossible to extract
+                                                    }
+
                                                 }
+                                                #endregion
                                             }
                                         }
                                     }
-                                    #endregion
-
-
-                                    if (foundOneStruct == false)
-                                    {
-                                        Console.WriteLine("    {0} not found ********", myFirstName[0]);
-                                        swLogFile.WriteLine("    {0} not found ********", myFirstName[0]);
-                                        foreach (string skippedData in lineElements.Skip(1))
-                                            swData.Write(";");
-                                        //swData.Write(",");
-                                    }
                                 }
-                                swData.Write("\r\n");
                                 #endregion
+
+
+                                if (foundOneStruct == false)
+                                {
+                                    Console.WriteLine("    {0} not found ********", myFirstName[0]);
+                                    swLogFile.WriteLine("    {0} not found ********", myFirstName[0]);
+                                    foreach (string skippedData in lineElements.Skip(1))
+                                        swData.Write(";");
+                                    //swData.Write(",");
+                                }
                             }
+                            swData.Write("\r\n");
+                            #endregion
+
                             //swData.Write("\r\n");
                             #endregion
                             #region VERBOSE
@@ -1304,8 +1274,9 @@ namespace VMS.TPS
                 Console.WriteLine("Number of accepted/total patients: {1}/{0} (accepted : at least one accepted plan)", nPatient, nPatientWithAnAcceptedPlan);
                 Console.WriteLine("Number of excluded IDs {0} (more than once in id.txt)", nDoublons);
                 Console.WriteLine("Number of accepted/total plans: {0}/{1}", numberOfAcceptedPlans, totalNumberOfPlans);
-                Console.WriteLine("Please type Enter\n");
-                Console.WriteLine("Execution time = {0:0.00} s", stopwatch.ElapsedMilliseconds / 1000);
+                Console.WriteLine("Execution time = {0:0.00} s\n", stopwatch.ElapsedMilliseconds / 1000);
+                Console.WriteLine(@"Please find results in out/data.csv");
+                Console.WriteLine("Please type Enter\n\n\n");
                 Console.ReadLine(); // Ask user to type enter to finish.
 
                 swLogFile.WriteLine("Number of accepted/total patients: {1}/{0} (accepted : at least one accepted plan)", nPatient, nPatientWithAnAcceptedPlan);
@@ -1340,10 +1311,10 @@ namespace VMS.TPS
                 DoseValue doseHalf = new DoseValue(0.5 * prescription.Dose, prescription.Unit);
                 //new DoseValue(0.5 * prescription.Dose, prescription.Unit);
                 Structure Body = myPlan.StructureSet.Structures.Single(s => s.DicomType == "BODY");
-                double myFull = myPlan.GetVolumeAtDose(Body,prescription,VolumePresentation.AbsoluteCm3);
+                double myFull = myPlan.GetVolumeAtDose(Body, prescription, VolumePresentation.AbsoluteCm3);
                 double myHalf = myPlan.GetVolumeAtDose(Body, prescription, VolumePresentation.AbsoluteCm3);
 
-                checkThat = 100*myHalf/myFull;
+                checkThat = 100 * myHalf / myFull;
             }
             #endregion
             #region MAX DOSE       
@@ -1656,5 +1627,12 @@ namespace VMS.TPS
             return (checkThat);
         }
         #endregion
+
+
+
+
+
+
+
     }
 }
