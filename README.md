@@ -30,7 +30,7 @@ If you like and use Dose Hunter, do not hesitate to tell us. Moreover please add
 - F.-X. Arnaud: help for the 'oh my god' regex 
 - B. Beeksma: add the Paddick, MU, ... 
 - K. Lacaze: add the plan uncertainties analysis
-- F. Sayah: help KL finding the bug 
+- F. Sayah: help KL finding the bug on v15... but it doesn't work on v18. Very interested if you are able to get data from plan uncertainty, using a stand alon script
 
 
 
