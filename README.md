@@ -25,7 +25,7 @@ If you like and use Dose Hunter, do not hesitate to tell us. Moreover please add
 (2)[Calvary Mater Newcastle](https://www.calvarycare.org.au/public-hospital-mater-newcastle/), New Castle, Australia
 
 
-- L. Simon: 90% of the code (input, output, etc.)
+- L. Simon: main dev (input, output, etc.)
 - F.-X. Arnaud: help for the 'oh my god' regex 
 - B. Beeksma: add the Paddick, MU, ... 
 - K. Lacaze: add the plan uncertainties analysis
