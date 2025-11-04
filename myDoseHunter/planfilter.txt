@@ -9,7 +9,7 @@ Course name must contain a string:yes:C1:C2
 Course name must not contain a string:no:PDIP:C1:OCTA
 
 # keep the plan only if the ID contains a string? If "yes", plans will be kept only if they contain the string (case unsensitive)
-Plan name must contain a string:yes:test:RA:tutu
+Plan name must contain a string:no:test:RA:tutu
 
 # Exclude the plan if the ID contains  a string? If "yes", plans will refused if they contain the string (case unsensitive)
 Exclude if plan name contains:yes:CQ:PDIP:Octa
@@ -24,10 +24,10 @@ Max Total Dose (Gy):1000
 TreatApproved plan:yes
 
 # Planning approved? If "no" planning approved plans will be excluded. 
-PlanningApproved plan:yes
+PlanningApproved plan:no
 
 # Unapproved? If "no" unapproved plans will be excluded. 
-Unapproved plan:yes
+Unapproved plan:no
 
 # Refused? If "no" refused plans will be excluded. 
 Refused plan:no
@@ -46,6 +46,6 @@ Explore Sumplans:no
 
 # Explore Uncertainty plans ?  if no, uncertainty plans are ignored, yes to explore them. Warning: it slows the execution 
 # Deprecated : doesn t work with Aria V18.0 and stand alone script.
-Explore uncertainty:yes
+# Explore uncertainty:yes
 
 

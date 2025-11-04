@@ -8,6 +8,8 @@ log.txt: main information about the execution
 data.csv: all collected data
 
  */
+
+
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
@@ -547,7 +549,7 @@ namespace VMS.TPS
             Console.WriteLine("Keep unamed plans?\t{0}", keepUnamedPlan);
 
             Console.WriteLine("Explore Sum plans?\t{0}", exploreSumPlan);
-          //  Console.WriteLine("Explore Uncertainties plans?\t{0}", exploreUP);
+            //  Console.WriteLine("Explore Uncertainties plans?\t{0}", exploreUP);
 
 
 
@@ -661,8 +663,14 @@ namespace VMS.TPS
             {
                 lineElements = myString.Split(',');  // separate elements in a line by a ,
                 string[] myFirstName = lineElements[0].Split(';'); // separate the element (different struct names separate by a ;) 
-                foreach (string myOthereMetrics in lineElements.Skip(1)) // Create a cell name: <struct name> (<dose index>)
-                    swData.Write(";{0}({1})", myFirstName[0], myOthereMetrics);
+
+                if (myFirstName[0] != "TechniqueXXX")
+                {
+                    foreach (string myOthereMetrics in lineElements.Skip(1)) // Create a cell name: <struct name> (<dose index>)
+                        swData.Write(";{0}({1})", myFirstName[0], myOthereMetrics);
+                }
+                else
+                    swData.Write(";Technique");
                 //swData.Write(",{0} ({1})", myFirstName[0], myOthereMetrics);
             }
             swData.Write("\r\n"); // add a final line break
@@ -916,9 +924,6 @@ namespace VMS.TPS
                         }
                         #endregion
 
-
-
-
                         #region Uncertainty plan
                         // uncertainties analysis can not be done with ARIA 18 stand alone version
                         #endregion
@@ -965,10 +970,64 @@ namespace VMS.TPS
                         foundOneStruct = false;
                         foreach (string myString in list_struct) // loop on lines of user dose index (1 by struct)
                         {
+                            
+                            
                             // get separated elements of a line (separator is a ,)
                             lineElements = myString.Split(',');
+                            string _treatmentType = string.Empty;
+
+                            if (lineElements[0] == "TechniqueXXX")
+                            {
+                                if (plan.Beams.Count() == 0)
+                                {
+                                    _treatmentType = "Tomotherapy";
+                                    
+                                }
+                                else
+                                {
+                                    Beam b = plan.Beams.First(x => x.IsSetupField == false);
+
+                                    if (b.TreatmentUnit.Id == "TOM")
+                                    {
+                                        _treatmentType = "VMAT";
+                                    }
+                                    else if (b.MLCPlanType.ToString() == "VMAT")
+                                    {
+                                        _treatmentType = "VMAT";
+                                    }
+                                    else if (b.MLCPlanType.ToString() == "ArcDynamic")
+                                    {
+                                        _treatmentType = "DCA";
+                                    }
+                                    else if (b.MLCPlanType.ToString() == "DoseDynamic")
+                                    {
+                                        _treatmentType = "IMRT";
+                                    }
+                                    else if (b.MLCPlanType.ToString() == "Static")
+                                        _treatmentType = "RTC (MLC)";
+                                    else if (b.MLCPlanType.ToString() == "NotDefined")
+                                    {
+                                        if (b.Technique.Id == "STATIC")  // can be TOMO, Electrons or 3DCRT without MLC
+                                        {
+                                            if (b.EnergyModeDisplayName.Contains("E"))
+                                                _treatmentType = "Electrons";
+                                            else
+                                                _treatmentType = "RTC (sans MLC)";
+                                        }
+                                        else
+                                            _treatmentType = "Technique non statique inconnue : pas de MLC !";
+                                    }
+                                }
+
+
+
+                                swData.Write(";"+ _treatmentType);
+                                swLogFile.WriteLine(";" + _treatmentType);
+                            }
+                            
                             // get the different possible names of the structure (separate by a ;)
                             string[] myFirstName = lineElements[0].Split(';');
+
 
                             foundOneStruct = false;
                             foreach (string myDiffStrucNames in myFirstName) // loop on the different names of a same struct
@@ -1026,6 +1085,7 @@ namespace VMS.TPS
                         //swData.Write("\r\n");
 
                         #endregion
+                
                         #region VERBOSE
                         if (verbose > 5)
                         {
@@ -1037,6 +1097,7 @@ namespace VMS.TPS
 
                     } //end of plan loop
                     #endregion
+             
                     #region LOOP EVERY PLAN SUM
                     if (exploreSumPlan)
                         foreach (PlanSum plan in course.PlanSums) // loop on the plans
@@ -1180,6 +1241,8 @@ namespace VMS.TPS
                             #region LOOP ON LINES OF THE FILE index.txt
                             foreach (string myString in list_struct) // loop on lines of user dose index (1 by struct)
                             {
+                                if (myString == "TechniqueXXX")
+                                    break;
                                 // get separated elements of a line (separator is a ,)
                                 lineElements = myString.Split(',');
                                 // get the different possible names of the structure (separate by a ;)
