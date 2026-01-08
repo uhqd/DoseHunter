@@ -1,5 +1,7 @@
 
-<img src="fisherMan4.png" width="500" align="right">
+
+<img src="fisherMan4.png" width="400" align="left">
+<br clear="left"/>
 
 
 # DOSE HUNTER
@@ -33,19 +35,17 @@ You can also simply add in the "acknowledgement" section of your articles or you
 
 # Authors
 
-**[Luc Simon](https://github.com/uhqd/)<sup>1</sup>, [François-Xavier Arnaud](https://github.com/fxarnaud/)<sup>1</sup>, [Bradley Beeksma](https://github.com/BradBeeksma)<sup>2</sup>, [Killian Lacaze](https://github.com/lacazek), [Farzam Fayah](https://github.com/Farzam07)<sup>1</sup>**
+**[Luc Simon](https://github.com/uhqd/)**: Project initiator and lead developer. Conceived the original idea, designed the architecture, and implemented the entire core codebase of DoseHunter. 
 
+**[François-Xavier Arnaud](https://github.com/fxarnaud/)**: Provided assistance on regular expression patterns.
 
-(1)[IUCT-Oncopole](https://www.iuct-oncopole.fr/), Toulouse, France
+**[Bradley Beeksma](https://github.com/BradBeeksma)**: Implementation of additional metrics (Paddick index, monitor units, etc.).
 
-(2)[Calvary Mater Newcastle](https://www.calvarycare.org.au/public-hospital-mater-newcastle/), New Castle, Australia
+**[Killian Lacaze](https://github.com/lacazek)**: add the plan uncertainties analysis on V15
 
+**[Farzam Fayah](https://github.com/Farzam07)**: add the plan uncertainties analysis on V15
 
-- L. Simon: all the code.
-- F.-X. Arnaud: help for the 'oh my god' regex 
-- B. Beeksma: add the Paddick, MU, ... 
-- K. Lacaze: add the plan uncertainties analysis
-- F. Sayah: help KL finding the bug on v15... but it doesn't work on v18. Very interested if you are able to get data from plan uncertainty, using a stand alone script
+Plan Uncertainies analysis doesn't work on v18. We are very interested if you are able to get data from plan uncertainty, using a stand alone script
 
 
 
