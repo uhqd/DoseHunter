@@ -15,13 +15,13 @@ If you like and use Dose Hunter, do not hesitate to tell us.
 You can cite it in your publications.
 This helps acknowledge the software and supports its continued development.
 ## Citation for LaTeX users (BibTeX)
-For Latex users, update your .bib file and add the content of this [file](https://github.com/uhqd/DoseHunter/dosehunter.bib).
+For Latex users, update your .bib file and add the content of this [file](https://github.com/uhqd/DoseHunter/blob/master/dosehunter.bib).
 Then cite it in your LaTeX document using:
 > \cite{DoseHunter2025}
 
 
 ## Citation for Zotero, EndNote, Mendeley (RIS format)
-You can import this RIS [file](https://github.com/uhqd/DoseHunter/dosehunter.ris) directly into Zotero, EndNote, or similar reference managers
+You can import this RIS [file](https://github.com/uhqd/DoseHunter/blob/master/dosehunter.ris) directly into Zotero, EndNote, or similar reference managers
 
 
 ## Simple Aknowledgements
