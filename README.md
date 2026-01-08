@@ -41,11 +41,9 @@ You can also simply add in the "acknowledgement" section of your articles or you
 
 **[Bradley Beeksma](https://github.com/BradBeeksma)**: Implementation of additional metrics (Paddick index, monitor units, etc.).
 
-**[Killian Lacaze](https://github.com/lacazek)**: add the plan uncertainties analysis on V15
 
-**[Farzam Fayah](https://github.com/Farzam07)**: add the plan uncertainties analysis on V15
 
-Plan Uncertainies analysis doesn't work on v18. We are very interested if you are able to get data from plan uncertainty, using a stand alone script
+**[Killian Lacaze](https://github.com/lacazek)** and **[Farzam Fayah](https://github.com/Farzam07)**: added the plan uncertainties analysis on V15 but it doesn't work on v18. We are very interested if you are able to get data from plan uncertainty, using a stand alone script
 
 
 
