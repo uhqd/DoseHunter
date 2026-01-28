@@ -35,12 +35,12 @@ namespace VMS.TPS
 {
     class Program
     {
-        #region Calculate DVH 
+        #region Class DVH 
         public class DVH
         {
             public DVH() { }
             #region CalculeDvh
-            internal DVHData CalculateDvh(PlanUncertainty uncert_plan, Structure structure, string volume_representation) // Function de generate DVHData variable
+            internal DVHData CalculateDvh(PlanUncertainty uncert_plan, Structure structure, string volume_representation) // return DVHdata
             {
 
                 if (volume_representation.ToUpper() == "RELATIVE")
@@ -57,6 +57,7 @@ namespace VMS.TPS
                 }
             }
             #endregion
+
             #region extract_VolumeAtDose
             internal double extract_VolumeAtDose(List<(double, double)> dvh_table, string Value, PlanSetup MyPlan, Structure MyStruct) // Function to calculate the Volume at certain Dose (Gy) from the DVHData
             {
@@ -169,7 +170,8 @@ namespace VMS.TPS
             }
             #endregion
             #endregion
-            #region CurveData2Table
+
+            #region CurveData2Table : convert DVH Data to a table of (Dose,Volume) tuples
             internal List<(double, double)> CurveData2Table(DVHData dvh_data)
             {
                 List<(double, double)> dvh_table = new List<(double, double)>(); //Table that will store dvh curve
@@ -183,7 +185,10 @@ namespace VMS.TPS
             #endregion
         }
         #endregion
-        [STAThread]
+
+
+        [STAThread] // single thread instruction for main program
+
         #region EMPTY MAIN PROGRAM
 
         static void Main(string[] args)
@@ -206,8 +211,9 @@ namespace VMS.TPS
         #region EXECUTE PROGRAM, THE REAL MAIN
         static void Execute(VMS.TPS.Common.Model.API.Application app)
         {
-            Stopwatch stopwatch = new Stopwatch();
+            Stopwatch stopwatch = new Stopwatch(); // to time the execution
             stopwatch.Start();
+
             #region WELCOME MESSAGE
             Console.WriteLine("-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-");
             Console.WriteLine("");
@@ -256,7 +262,7 @@ namespace VMS.TPS
             bool foundOneStruct;
             StructureSet ss;
             bool exploreSumPlan;
-            //bool exploreUP;
+            //bool exploreUP; // deprecated
             #endregion
 
             #region READ THE ID FILE
@@ -273,16 +279,20 @@ namespace VMS.TPS
                 return;
             }
             int nPatientsInList = 0;
-            StreamReader sr = new StreamReader(idfilename);
-            line = sr.ReadLine(); // read first line
+            StreamReader sr = new StreamReader(idfilename); // open file
+            line = sr.ReadLine().Trim();// read and remove spaces before and after
+            
             if ((line != null) && (line.Length > 2)) // an ID Must be > 2 characters
             {
+                line = line.Trim(); // remove spaces before and after
                 nPatientsInList++;
                 list_patient.Add(line);
             }
+            
             while (line != null)
             {
-                line = sr.ReadLine();
+                line = sr.ReadLine().Trim();// read and remove spaces before and after
+               
                 #region TEST IF ID IS A DOUBLON
                 foreach (string ipp in list_patient) // loop on the patient list
                 {
@@ -337,9 +347,8 @@ namespace VMS.TPS
             keepIfPlanNameContainAstring = false;
             excludeIfPlannedNameContainAString = false;
             exploreSumPlan = false;
-            //exploreUP = false;
+            //exploreUP = false; // deprecated
             keepIfCourseNameContainAstring = false;
-
             excludeIfCourseNameContainAstring = false;
 
 
@@ -361,14 +370,17 @@ namespace VMS.TPS
                     if (line != null)
                     {
                         filterTags = line.Split(':');
+
                         if (filterTags[0] == "Min Total Dose (Gy)")
                         {
                             minTotalDose = Convert.ToDouble(filterTags[1]);
                         }
+                        
                         if (filterTags[0] == "Max Total Dose (Gy)")
                         {
                             maxTotalDose = Convert.ToDouble(filterTags[1]);
                         }
+                        
                         if (filterTags[0] == "TreatApproved plan")
                         {
                             if (filterTags[1].ToLower() == "yes")
@@ -378,6 +390,7 @@ namespace VMS.TPS
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
+                        
                         if (filterTags[0] == "PlanningApproved plan")
                         {
                             if (filterTags[1].ToLower() == "yes")
@@ -387,6 +400,7 @@ namespace VMS.TPS
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
+                        
                         if (filterTags[0] == "Unapproved plan")
                         {
                             if (filterTags[1].ToLower() == "yes")
@@ -396,6 +410,7 @@ namespace VMS.TPS
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
+
                         if (filterTags[0] == "Named plan")
                         {
                             if (filterTags[1].ToLower() == "yes")
@@ -405,6 +420,7 @@ namespace VMS.TPS
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
+
                         if (filterTags[0] == "Unnamed plan")
                         {
                             if (filterTags[1].ToLower() == "yes")
@@ -414,6 +430,7 @@ namespace VMS.TPS
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
+
                         if (filterTags[0] == "Refused plan")
                         {
                             if (filterTags[1].ToLower() == "yes")
@@ -423,6 +440,7 @@ namespace VMS.TPS
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
+
                         if (filterTags[0] == "Retired plan")
                         {
                             if (filterTags[1].ToLower() == "yes")
@@ -432,6 +450,7 @@ namespace VMS.TPS
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
+
                         if (filterTags[0] == "Plan name must contain a string")
                         {
                             if (filterTags[1].ToLower() == "yes")
@@ -444,6 +463,7 @@ namespace VMS.TPS
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
+
                         if (filterTags[0] == "Exclude if plan name contains")
                         {
                             if (filterTags[1].ToLower() == "yes")
@@ -456,6 +476,7 @@ namespace VMS.TPS
                             else
                                 Console.WriteLine("*** Unexpected value for filter '{0}'", filterTags[0]);
                         }
+
                         if (filterTags[0] == "Explore Sumplans")
                         {
                             if (filterTags[1].ToLower() == "yes")
@@ -655,10 +676,10 @@ namespace VMS.TPS
             // create file for output data
             StreamWriter swData = new StreamWriter("out/data.csv");
 
-            #region WRITE CSV HEAD
-            //swData.Write("ID,date,user");  // first 3 fields separated by a coma
-            //swData.Write("patientID;planID;date;user");  // first 3 fields separated by a ;
+            #region WRITE CSV HEAD (first line)
+
             swData.Write("patientID;courseID;planID;date;user;TotalDose;Dose/#;Fractions;MU;MI;Normalisation");// first 11 fields separated by a ;
+            
             foreach (string myString in list_struct) // loop on the lines
             {
                 lineElements = myString.Split(',');  // separate elements in a line by a ,
@@ -680,6 +701,7 @@ namespace VMS.TPS
                 Console.ReadLine();
             }
             #endregion
+
             #endregion
 
             #region LOOP EVERY PATIENT
@@ -701,7 +723,9 @@ namespace VMS.TPS
                 }
                 int keepThisPlan = 1;
                 int keepThisCourse = 1;
+
                 #region LOOP EVERY COURSE
+
                 #region TEST THE COURSE
                 foreach (Course course in p.Courses) // loop on the courses
                 {
@@ -724,8 +748,6 @@ namespace VMS.TPS
 
                         }
                     }
-
-
 
 
                     if (excludeIfCourseNameContainAstring)
@@ -768,8 +790,8 @@ namespace VMS.TPS
 
                         #region TEST THE PLAN
 
-                        #region EXCLUDE ALL PLANS WITH NO BEAM
-                        try                     // this exception
+                        #region EXCLUDE ALL PLANS WITH NO BEAM -> DEPRECATED : in V18 some imported plans have no beam but dose is calculated
+                        /*try                     // this exception
                         {
                             plan.Beams.Count(); // manages plans with no beams. they make the program crash
                         }
@@ -779,15 +801,25 @@ namespace VMS.TPS
                             swLogFile.WriteLine("         refused: THE PLAN HAS NO BEAM ");
                             continue; // next plan
 
-                        }
+                        }*/
                         #endregion
-                        #region EXCLUDE ALL PLANS WITH NO VALID DOSE
 
-                        if (plan.IsDoseValid == false)
+                        #region EXCLUDE ALL PLANS WITH NO VALID DOSE
+                        try
                         {
-                            Console.WriteLine("         refused: THE PLAN HAS NO VALID DOSE");
-                            swLogFile.WriteLine("         refused: THE PLAN HAS NO NO VALID DOSE ");
+                            if (plan.IsDoseValid == false)
+                            {
+                                Console.WriteLine("         refused: THE PLAN HAS NO VALID DOSE");
+                                swLogFile.WriteLine("         refused: THE PLAN HAS NO NO VALID DOSE ");
+                                continue; // next plan
+                            }
+                        }
+                        catch
+                        {
+                            Console.WriteLine("         refused: THE PLAN IS CORRUPTED");
+                            swLogFile.WriteLine("         refused: THE PLAN IS CORRUPTED ");
                             continue; // next plan
+
                         }
 
                         #endregion
@@ -879,7 +911,6 @@ namespace VMS.TPS
                             continue;
                         }
                         #endregion
-
                         #region TEST IF PLAN CONTAINS OR DOES NOT CONTAIN SOME CHOSEN STRINGS
                         if (keepIfPlanNameContainAstring)
                         {
@@ -958,10 +989,10 @@ namespace VMS.TPS
                             if (!beam.IsSetupField)
                                 MU = MU + Math.Round(beam.Meterset.Value, 2);
                         }
-                        //MI
+                        //MI  (UM/Gy)
                         MI = Math.Round(MU / (plan.DosePerFraction.Dose), 3);
 
-                        // write first 11 columns
+                        // write first 11 columns (patient ID, patien Name...)
                         swData.Write("{0};{1};{2};{3};{4};{5};{6};{7};{8};{9};{10}",
                             p.Id, course.Id, plan.Id, plan.CreationDateTime, plan.CreationUserName, plan.TotalDose.ValueAsString, plan.DosePerFraction.ValueAsString,
                             plan.NumberOfFractions, MU, MI, Math.Round(plan.PlanNormalizationValue, 1));
@@ -1045,6 +1076,7 @@ namespace VMS.TPS
                                             swLogFile.WriteLine("    {0} found", myDiffStrucNames); // verbose
                                             if (verbose > 0)
                                                 Console.WriteLine("    {0} found", myDiffStrucNames);
+                                            
                                             foreach (string dataToGet in lineElements.Skip(1)) // loop on index
                                             {
                                                 if (verbose > 5)
@@ -1358,7 +1390,7 @@ namespace VMS.TPS
         }
         #endregion
 
-        #region AN EXTERNAL FUCTION USING REGEX TO GET THE DATA
+        #region   GET THE DATA FOR PLANSET
         public static double gimmeThatBro(string myDataToGet, Structure myStruct, PlanSetup myPlan, DVHData dvh)
         {
             int verbose = 0;
@@ -1533,14 +1565,17 @@ namespace VMS.TPS
                 }
             }
             #endregion
+            #region check NaN
             if (Double.IsNaN(checkThat))
                 checkThat = -1.0;
             if (checkThat == -1.0)
                 Console.WriteLine("Impossible to obtain {0} for {1} in {2} ", myDataToGet, myStruct.Id, myPlan.Id);
+            #endregion
             return (checkThat);
         }
         #endregion
-        #region AN EXTERNAL FUCTION USING REGEX TO GET THE DATA FOR SUMPLAN
+
+        #region   GET THE DATA FOR SUMPLAN
         public static double gimmeThatBroSum(string myDataToGet, Structure myStruct, PlanSum myPlan, DVHData dvh)
         {
             int verbose = 0;
@@ -1682,11 +1717,12 @@ namespace VMS.TPS
                     checkThat = -1.0;
             }
             #endregion
-
+            #region check Nan
             if (Double.IsNaN(checkThat))
                 checkThat = -1.0;
             if (checkThat == -1.0)
                 Console.WriteLine("Impossible to obtain {0} for {1} in {2} ", myDataToGet, myStruct.Id, myPlan.Id);
+            #endregion
             return (checkThat);
         }
         #endregion
