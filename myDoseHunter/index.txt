@@ -1,2 +1,4 @@
-CTV,median,min,mean
-TechniqueXXX
+PTV_D2,mean,D98%,D95%,D50%,max,D0.5cc
+PTV_D3,mean,D98%,D95%,D50%,max,D0.5cc
+PTV_D4,mean,D98%,D95%,D50%,max,D0.5cc
+PTV_D5,mean,D98%,D95%,D50%,max,D0.5cc

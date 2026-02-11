@@ -3,25 +3,25 @@
 # DO NO MODIFY THIS FILE EXCEPT THE PART OF THE LINES AFTER THE ":"
 
 # keep the COURSE only if the ID contains a string? If "yes", courses will be kept only if they contain the string (case unsensitive)
-Course name must contain a string:yes:C1:C2
+Course name must contain a string:no:C1:C2
 
 # Exclude the COURSE if the ID  contains a string? If "yes", course will be excluded only if they contain the string (case unsensitive)
-Course name must not contain a string:no:PDIP:C1:OCTA
+Course name must not contain a string:yes:CQ:PDIP:OCTA:test:Eval
 
 # keep the plan only if the ID contains a string? If "yes", plans will be kept only if they contain the string (case unsensitive)
-Plan name must contain a string:no:test:RA:tutu
+Plan name must contain a string:no:HF:FF
 
 # Exclude the plan if the ID contains  a string? If "yes", plans will refused if they contain the string (case unsensitive)
-Exclude if plan name contains:yes:CQ:PDIP:Octa
+Exclude if plan name contains:no:CQ:PDIP:Octa:test:HF38
 
 # keep only the plans with a total dose > to a value
-Min Total Dose (Gy):10
+Min Total Dose (Gy):0
 
 # keep only the plans with a total dose < to a value
-Max Total Dose (Gy):1000
+Max Total Dose (Gy):50
 
 # Treat approved? If "no" treat approved plans will be excluded. 
-TreatApproved plan:yes
+TreatApproved plan:no
 
 # Planning approved? If "no" planning approved plans will be excluded. 
 PlanningApproved plan:no
@@ -42,10 +42,10 @@ Named plan:yes
 Unnamed plan:yes
 
 # Explore Sum plans ?  if no, sum plans are ignored, yes to explore them
-Explore Sumplans:no
+Explore Sumplans:yes
 
 # Explore Uncertainty plans ?  if no, uncertainty plans are ignored, yes to explore them. Warning: it slows the execution 
 # Deprecated : doesn t work with Aria V18.0 and stand alone script.
-# Explore uncertainty:yes
+# Explore uncertainty:no
 
 

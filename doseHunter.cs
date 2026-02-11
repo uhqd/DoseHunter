@@ -288,10 +288,11 @@ namespace VMS.TPS
                 nPatientsInList++;
                 list_patient.Add(line);
             }
-            
-            while (line != null)
+
+            while ((line = sr.ReadLine()) != null)
             {
-                line = sr.ReadLine().Trim();// read and remove spaces before and after
+                line = line.Trim();
+
                
                 #region TEST IF ID IS A DOUBLON
                 foreach (string ipp in list_patient) // loop on the patient list
@@ -1152,9 +1153,31 @@ namespace VMS.TPS
 
 
 
-                            #region TEST THE PLAN
+                            #region TEST THE PLAN SUM
 
-                            #region TEST IF THE PLAN HAS A NAME
+                            try
+                            {
+                                if (plan.Dose == null)
+                                {
+                                    Console.WriteLine("         refused: THE PLAN SUM HAS NO VALID DOSE");
+                                    swLogFile.WriteLine("         refused: THE PLAN SUM HAS NO NO VALID DOSE ");
+                                    continue; // next plan
+                                }
+                            }
+                            catch
+                            {
+                                Console.WriteLine("         refused: THE PLAN SUM IS CORRUPTED");
+                                swLogFile.WriteLine("         refused: THE PLAN SUM IS CORRUPTED ");
+                                continue; // next plan
+
+                            }
+
+                            #region TEST IF THE PLAN SUM HAS A DOSE
+
+                            #endregion
+
+
+                            #region TEST IF THE PLAN SUM HAS A NAME
 
 
                             if (keepNamedPlan == false) // dont keep  plans with a name
