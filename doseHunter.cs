@@ -258,6 +258,7 @@ namespace VMS.TPS
             bool keepIfPlanNameContainAstring, excludeIfPlannedNameContainAString;
             bool keepIfCourseNameContainAstring;
             double MU, MI;
+            int phases;
             bool excludeIfCourseNameContainAstring;
             bool foundOneStruct;
             StructureSet ss;
@@ -679,7 +680,7 @@ namespace VMS.TPS
 
             #region WRITE CSV HEAD (first line)
 
-            swData.Write("patientID;courseID;planID;date;user;TotalDose;Dose/#;Fractions;MU;MI;Normalisation");// first 11 fields separated by a ;
+            swData.Write("patientID;courseID;planID;date;user;TotalDose;Dose/#;Fractions;Nphases;MU;MI;Normalisation");// first 11 fields separated by a ;
             
             foreach (string myString in list_struct) // loop on the lines
             {
@@ -993,10 +994,15 @@ namespace VMS.TPS
                         //MI  (UM/Gy)
                         MI = Math.Round(MU / (plan.DosePerFraction.Dose), 3);
 
+                        // phases (in Toulouse treatment for lung sbrt is on 3 or 6 phases, so it can be interesting to have this information)
+                        phases = 1; /// not a gated treatment, so 1 phase
+                        if (plan.TargetVolumeID.Contains("3")) phases = 3;
+                        if (plan.TargetVolumeID.Contains("6")) phases = 6;
+
                         // write first 11 columns (patient ID, patien Name...)
-                        swData.Write("{0};{1};{2};{3};{4};{5};{6};{7};{8};{9};{10}",
+                        swData.Write("{0};{1};{2};{3};{4};{5};{6};{7};{8};{9};{10};{11}",
                             p.Id, course.Id, plan.Id, plan.CreationDateTime, plan.CreationUserName, plan.TotalDose.ValueAsString, plan.DosePerFraction.ValueAsString,
-                            plan.NumberOfFractions, MU, MI, Math.Round(plan.PlanNormalizationValue, 1));
+                            plan.NumberOfFractions, phases,MU, MI, Math.Round(plan.PlanNormalizationValue, 1));
 
                         ss = plan.StructureSet;
                         foundOneStruct = false;
